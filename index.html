@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HKDSE Chemistry: Standard Solution Preparation</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- MathJax -->
+    <script>
+        MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['$$', '$$']]
+            }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body { margin: 0; overflow-x: hidden; background-color: #0f172a; color: #f8fafc; }
+        #canvas-container { width: 100%; height: 100%; min-height: 500px; position: relative; }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1e293b; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        .glass-panel { background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .tab-active { background: #3b82f6; color: white; }
+        .tab-inactive { background: rgba(71, 85, 105, 0.5); color: #cbd5e1; }
+        .tab-inactive:hover { background: rgba(71, 85, 105, 0.8); }
+        .hidden { display: none; }
+    </style>
+</head>
+<body class="flex flex-col md:flex-row h-screen">
+
+    <!-- Left Sidebar: Theory & UI -->
+    <div class="w-full md:w-1/3 h-full overflow-y-auto p-6 border-r border-slate-700 bg-slate-900 flex flex-col gap-6 relative z-10 shadow-xl shadow-slate-900/50">
+        
+        <div class="border-b border-slate-700 pb-4">
+            <h1 class="text-2xl font-bold text-blue-400 mb-2">
+                <i class="fas fa-flask text-blue-500 mr-2"></i>Topic 4: Acids & Bases
+            </h1>
+            <h2 class="text-lg text-slate-300 font-semibold">Standard Solution Preparation</h2>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="flex gap-2">
+            <button onclick="switchTab('molarity')" id="tab-molarity" class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-active">
+                <i class="fas fa-vial mr-1"></i> Molarity Concept
+            </button>
+            <button onclick="switchTab('washings')" id="tab-washings" class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive">
+                <i class="fas fa-hands-wash mr-1"></i> Washings Transfer
+            </button>
+        </div>
+
+        <!-- Tab 1: Molarity Misconception -->
+        <div id="content-molarity" class="flex-1 flex flex-col gap-4">
+            <!-- Concept Explanation -->
+            <div class="glass-panel p-5 rounded-xl shadow-lg">
+                <h3 class="text-xl font-bold text-red-400 mb-3"><i class="fas fa-times-circle mr-2"></i>The Misconception</h3>
+                <p class="text-slate-300 text-sm mb-2 leading-relaxed">
+                    Many students believe that to prepare a \(1.0 \text{ M}\) solution, you simply dissolve \(1.0 \text{ mole}\) of solute into exactly \(1.0 \text{ dm}^3\) of water.
+                </p>
+                
+                <div class="mt-4 border-t border-slate-700 pt-4">
+                    <h3 class="text-xl font-bold text-green-400 mb-3"><i class="fas fa-check-circle mr-2"></i>The Right Concept</h3>
+                    <p class="text-slate-300 text-sm mb-3 leading-relaxed">
+                        Molarity is defined by the volume of the <strong>entire solution</strong>, not just the solvent!
+                    </p>
+                    <div class="bg-slate-800 p-3 rounded-lg text-center mb-3 border border-slate-700">
+                        $$\text{Molarity (M)} = \frac{\text{Moles of Solute (mol)}}{\text{Volume of Solution (dm}^3)}$$
+                    </div>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        When solute dissolves in water, the total volume <strong>increases</strong>. If you add solute to \(1.0 \text{ dm}^3\) of water, the final volume will be \(> 1.0 \text{ dm}^3\), resulting in a molarity lower than expected. 
+                        <br><br>
+                        <strong>Correct Method:</strong> Add the solute to a volumetric flask, dissolve in a small amount of water, and then top up with water <em>exactly to the graduation mark</em>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Dynamic Output -->
+            <div class="flex-grow flex flex-col gap-4">
+                <!-- Wrong Beaker Stats -->
+                <div class="bg-red-950/30 border border-red-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                    <h4 class="font-bold text-red-300 mb-2">Beaker (Wrong Method)</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Solvent added:</span>
+                        <span class="text-right font-mono text-slate-200">1.00 dm³</span>
+                        
+                        <span class="text-slate-400">Solute added:</span>
+                        <span class="text-right font-mono text-slate-200" id="wrong-moles">0.00 mol</span>
+                        
+                        <span class="text-slate-400">Final Volume:</span>
+                        <span class="text-right font-mono text-red-300 font-bold" id="wrong-vol">1.00 dm³</span>
+                        
+                        <span class="text-slate-400 font-bold mt-2">Molarity:</span>
+                        <span class="text-right font-mono text-red-400 font-bold mt-2 text-lg" id="wrong-molarity">0.00 M</span>
+                    </div>
+                </div>
+
+                <!-- Right Flask Stats -->
+                <div class="bg-green-950/30 border border-green-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                    <h4 class="font-bold text-green-300 mb-2">Volumetric Flask (Right Method)</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Solute added:</span>
+                        <span class="text-right font-mono text-slate-200" id="right-moles">0.00 mol</span>
+                        
+                        <span class="text-slate-400">Final Volume:</span>
+                        <span class="text-right font-mono text-green-300 font-bold" id="right-vol">0.50 dm³</span>
+                        
+                        <span class="text-slate-400 font-bold mt-2">Molarity:</span>
+                        <span class="text-right font-mono text-green-400 font-bold mt-2 text-lg" id="right-molarity">Wait...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Washings Transfer -->
+        <div id="content-washings" class="flex-1 flex flex-col gap-4 hidden">
+            <!-- Concept Explanation -->
+            <div class="glass-panel p-5 rounded-xl shadow-lg">
+                <h3 class="text-xl font-bold text-red-400 mb-3"><i class="fas fa-times-circle mr-2"></i>The Misconception</h3>
+                <p class="text-slate-300 text-sm mb-2 leading-relaxed">
+                    Students may forget to transfer the washings from the beaker, glass rod, and filter funnel to the volumetric flask.
+                </p>
+                
+                <div class="mt-4 border-t border-slate-700 pt-4">
+                    <h3 class="text-xl font-bold text-green-400 mb-3"><i class="fas fa-check-circle mr-2"></i>Why Washings Matter</h3>
+                    <p class="text-slate-300 text-sm mb-3 leading-relaxed">
+                        Some solute remains on the glassware after transfer. <strong>Without washing</strong>, you lose this solute, resulting in <strong>fewer moles</strong> in the final solution.
+                    </p>
+                    <div class="bg-slate-800 p-3 rounded-lg text-center mb-3 border border-slate-700">
+                        $$\text{Actual Molarity} = \frac{\text{Moles Transferred}}{\text{Volume}} < \text{Expected Molarity}$$
+                    </div>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        <strong>Correct Method:</strong> After transferring the solution, wash the beaker, glass rod, and filter funnel with distilled water several times. Pour all washings into the volumetric flask to ensure <em>all solute</em> is transferred.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Dynamic Output -->
+            <div class="flex-grow flex flex-col gap-4">
+                <!-- Without Washings -->
+                <div class="bg-red-950/30 border border-red-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                    <h4 class="font-bold text-red-300 mb-2">Without Washings (Wrong)</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Initial solute:</span>
+                        <span class="text-right font-mono text-slate-200">1.00 mol</span>
+                        
+                        <span class="text-slate-400">Lost in beaker:</span>
+                        <span class="text-right font-mono text-orange-300" id="wash-lost">0.00 mol</span>
+                        
+                        <span class="text-slate-400">Transferred:</span>
+                        <span class="text-right font-mono text-red-300 font-bold" id="wash-wrong-moles">1.00 mol</span>
+                        
+                        <span class="text-slate-400">Final Volume:</span>
+                        <span class="text-right font-mono text-slate-200">1.00 dm³</span>
+                        
+                        <span class="text-slate-400 font-bold mt-2">Molarity:</span>
+                        <span class="text-right font-mono text-red-400 font-bold mt-2 text-lg" id="wash-wrong-molarity">1.00 M</span>
+                    </div>
+                </div>
+
+                <!-- With Washings -->
+                <div class="bg-green-950/30 border border-green-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                    <h4 class="font-bold text-green-300 mb-2">With Washings (Correct)</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Initial solute:</span>
+                        <span class="text-right font-mono text-slate-200">1.00 mol</span>
+                        
+                        <span class="text-slate-400">Recovered:</span>
+                        <span class="text-right font-mono text-green-300" id="wash-recovered">0.00 mol</span>
+                        
+                        <span class="text-slate-400">Transferred:</span>
+                        <span class="text-right font-mono text-green-300 font-bold" id="wash-right-moles">1.00 mol</span>
+                        
+                        <span class="text-slate-400">Final Volume:</span>
+                        <span class="text-right font-mono text-slate-200">1.00 dm³</span>
+                        
+                        <span class="text-slate-400 font-bold mt-2">Molarity:</span>
+                        <span class="text-right font-mono text-green-400 font-bold mt-2 text-lg" id="wash-right-molarity">1.00 M</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+                    
+                    <span class="text-slate-400">Final Volume:</span>
+                    <span class="text-right font-mono text-green-300 font-bold" id="right-vol">0.50 dm³</span>
+                    
+                    <span class="text-slate-400 font-bold mt-2">Molarity:</span>
+                    <span class="text-right font-mono text-green-400 font-bold mt-2 text-lg" id="right-molarity">Wait...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Area: 2D Canvas & Controls -->
+    <div class="w-full md:w-2/3 h-full relative flex flex-col bg-slate-800">
+        
+        <!-- 2D Container -->
+        <div id="canvas-container" class="flex-grow overflow-hidden">
+            <canvas id="simCanvas" class="w-full h-full"></canvas>
+            
+            <!-- Overlays for Tab 1 -->
+            <div id="overlay-molarity">
+                <div class="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 drop-shadow-md">
+                    <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">Beaker</span>
+                </div>
+                
+                <div class="absolute top-1/4 left-3/4 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 drop-shadow-md">
+                    <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">Volumetric Flask</span>
+                </div>
+            </div>
+
+            <!-- Overlays for Tab 2 -->
+            <div id="overlay-washings" class="hidden">
+                <div class="absolute top-1/4 left-1/4 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 drop-shadow-md">
+                    <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">Without Washings</span>
+                </div>
+                
+                <div class="absolute top-1/4 left-3/4 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 drop-shadow-md">
+                    <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">With Washings</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls Panel (Bottom) - Tab 1 -->
+        <div id="controls-molarity" class="h-24 bg-slate-900 border-t border-slate-700 p-4 flex justify-center items-center gap-4 z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <button onclick="simulateWrong()" id="btn-wrong" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-red-900/50 flex items-center gap-2">
+                <i class="fas fa-exclamation-triangle"></i> Simulate Wrong Concept
+            </button>
+            <button onclick="simulateRight()" id="btn-right" class="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-green-900/50 flex items-center gap-2">
+                <i class="fas fa-check-circle"></i> Simulate Correct Concept
+            </button>
+            <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center gap-2">
+                <i class="fas fa-undo"></i> Reset
+            </button>
+        </div>
+
+        <!-- Controls Panel (Bottom) - Tab 2 -->
+        <div id="controls-washings" class="h-24 bg-slate-900 border-t border-slate-700 p-4 flex justify-center items-center gap-4 z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] hidden">
+            <button onclick="simulateNoWashings()" id="btn-no-wash" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-red-900/50 flex items-center gap-2">
+                <i class="fas fa-times"></i> Skip Washings
+            </button>
+            <button onclick="simulateWithWashings()" id="btn-with-wash" class="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-green-900/50 flex items-center gap-2">
+                <i class="fas fa-hands-wash"></i> Transfer Washings
+            </button>
+            <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center gap-2">
+                <i class="fas fa-undo"></i> Reset
+            </button>
+        </div>
+    </div>
+
+    <!-- HTML5 Canvas 2D Simulation Script -->
+    <script>
+        let currentTab = 'molarity';
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab buttons
+            document.getElementById('tab-molarity').className = tab === 'molarity' 
+                ? 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-active'
+                : 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive';
+            document.getElementById('tab-washings').className = tab === 'washings' 
+                ? 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-active'
+                : 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive';
+            
+            // Update content
+            document.getElementById('content-molarity').classList.toggle('hidden', tab !== 'molarity');
+            document.getElementById('content-washings').classList.toggle('hidden', tab !== 'washings');
+            
+            // Update overlays
+            document.getElementById('overlay-molarity').classList.toggle('hidden', tab !== 'molarity');
+            document.getElementById('overlay-washings').classList.toggle('hidden', tab !== 'washings');
+            
+            // Update controls
+            document.getElementById('controls-molarity').classList.toggle('hidden', tab !== 'molarity');
+            document.getElementById('controls-washings').classList.toggle('hidden', tab !== 'washings');
+            
+            resetSimulation();
+        }
+
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+        let animationId;
+        
+        // Simulation States
+        const state = {
+            wrongVol: 1.0,
+            wrongMoles: 0,
+            rightVol: 0.5,
+            rightMoles: 0,
+            isAnimatingWrong: false,
+            isAnimatingRight: false,
+            // Washings tab
+            washLostMoles: 0,
+            washWrongMoles: 1.0,
+            washRightMoles: 1.0,
+            washRecovered: 0,
+            isAnimatingNoWash: false,
+            isAnimatingWithWash: false,
+            washStage: 0 // 0: initial, 1: transferring, 2: washing, 3: complete
+        };
+
+        let particles = [];
+        let washingParticles = [];
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            width = container.clientWidth;
+            height = container.clientHeight;
+            // Handle high DPI displays
+            canvas.width = width * window.devicePixelRatio;
+            canvas.height = height * window.devicePixelRatio;
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createParticles(targetX, groundY) {
+            for (let i = 0; i < 40; i++) {
+                particles.push({
+                    x: targetX + (Math.random() - 0.5) * 60,
+                    y: 0 - Math.random() * 100, // Start above screen
+                    vy: 3 + Math.random() * 3,
+                    r: 2 + Math.random() * 3,
+                    targetY: groundY - 20 - Math.random() * 40,
+                    opacity: 1.0,
+                    dissolved: false
+                });
+            }
+        }
+
+        function updateParticles() {
+            let allFinished = true;
+            for (let p of particles) {
+                if (!p.dissolved) {
+                    p.y += p.vy;
+                    if (p.y >= p.targetY) {
+                        p.dissolved = true;
+                    } else {
+                        allFinished = false;
+                    }
+                } else if (p.opacity > 0) {
+                    p.opacity -= 0.02; // Fade out slowly
+                    allFinished = false;
+                }
+            }
+            return allFinished;
+        }
+
+        function draw() {
+            // Clear background
+            ctx.clearRect(0, 0, width, height);
+            
+            if (currentTab === 'molarity') {
+                drawMolarityTab();
+            } else {
+                drawWashingsTab();
+            }
+        }
+
+        function drawMolarityTab() {
+            const groundY = height * 0.8;
+            const beakerX = width * 0.25;
+            const flaskX = width * 0.75;
+
+            // --- Draw Beaker (Wrong Setup) ---
+            const bWidth = 140;
+            const bHeight = 180;
+            const bLeft = beakerX - bWidth/2;
+            const bBottom = groundY;
+            
+            // Beaker Water
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
+            const bWaterHeight = 120 * state.wrongVol; // 120px is exactly 1.0 dm3
+            ctx.fillRect(bLeft + 5, bBottom - bWaterHeight, bWidth - 10, bWaterHeight);
+            
+            // Beaker Mark (1.0 dm3)
+            ctx.strokeStyle = '#ef4444'; // Red
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(bLeft - 10, bBottom - 120);
+            ctx.lineTo(bLeft + 20, bBottom - 120);
+            ctx.stroke();
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '14px sans-serif';
+            ctx.fillText('1.0 dm³', bLeft - 60, bBottom - 115);
+
+            // Beaker Glass
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(bLeft, bBottom - bHeight);
+            ctx.lineTo(bLeft, bBottom);
+            ctx.lineTo(bLeft + bWidth, bBottom);
+            ctx.lineTo(bLeft + bWidth, bBottom - bHeight);
+            ctx.stroke();
+
+            // --- Draw Volumetric Flask (Right Setup) ---
+            const fNeckW = 30;
+            const fTopY = groundY - 260;
+            const fNeckBottomY = groundY - 110;
+            const fFlatW = 70;
+            const fBulge = 90;
+
+            // Helper to draw pear-shaped flask path
+            function buildFlaskPath(offset = 0) {
+                ctx.beginPath();
+                ctx.moveTo(flaskX - fNeckW/2 + offset, fTopY);
+                ctx.lineTo(flaskX - fNeckW/2 + offset, fNeckBottomY);
+                ctx.bezierCurveTo(
+                    flaskX - fBulge + offset, fNeckBottomY + 15,
+                    flaskX - fBulge + offset, groundY - offset,
+                    flaskX - fFlatW/2 + offset, groundY - offset
+                );
+                ctx.lineTo(flaskX + fFlatW/2 - offset, groundY - offset);
+                ctx.bezierCurveTo(
+                    flaskX + fBulge - offset, groundY - offset,
+                    flaskX + fBulge - offset, fNeckBottomY + 15,
+                    flaskX + fNeckW/2 - offset, fNeckBottomY
+                );
+                ctx.lineTo(flaskX + fNeckW/2 - offset, fTopY);
+            }
+            
+            // Flask Water
+            // 0.5 dm3 = base half full (height ~60). 1.0 dm3 = up to mark on neck (height = 210)
+            const rightVolVisual = state.rightVol === 0.5 ? 60 : 60 + (state.rightVol - 0.5) * 2 * (150); 
+            
+            ctx.save();
+            // Clip to flask shape (slightly inset for inner water)
+            buildFlaskPath(3);
+            ctx.clip();
+            
+            ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
+            ctx.fillRect(flaskX - fBulge, groundY - rightVolVisual, fBulge * 2, rightVolVisual);
+            ctx.restore();
+
+            // Flask Mark (1.0 dm3)
+            const flaskMarkY = groundY - 210; 
+            ctx.strokeStyle = '#22c55e'; // Green
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(flaskX - fNeckW/2 - 15, flaskMarkY);
+            ctx.lineTo(flaskX + fNeckW/2 + 15, flaskMarkY);
+            ctx.stroke();
+            ctx.fillStyle = '#22c55e';
+            ctx.fillText('1.0 dm³', flaskX + fNeckW/2 + 25, flaskMarkY + 5);
+
+            // Flask Glass
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 4;
+            buildFlaskPath(0);
+            ctx.stroke();
+
+            // --- Draw Particles ---
+            for (let p of particles) {
+                if (p.opacity > 0) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // --- Animation State Logic ---
+            if (state.isAnimatingWrong) {
+                let pDone = updateParticles();
+                
+                // When particles just hit bottom, update moles
+                if (pDone && state.wrongMoles === 0) {
+                    state.wrongMoles = 1.0;
+                    updateUI();
+                }
+
+                // Swell volume after dissolution
+                if (pDone) {
+                    if (state.wrongVol < 1.08) { // 8% visual increase
+                        state.wrongVol += 0.002;
+                        updateUI();
+                    } else {
+                        state.wrongVol = 1.08;
+                        state.isAnimatingWrong = false;
+                        updateUI();
+                    }
+                }
+            }
+
+            if (state.isAnimatingRight) {
+                let pDone = updateParticles();
+                
+                if (pDone && state.rightMoles === 0) {
+                    state.rightMoles = 1.0;
+                    updateUI();
+                }
+
+                if (pDone) {
+                    if (state.rightVol < 1.0) {
+                        state.rightVol += 0.005; // Quick fill up to mark
+                        updateUI();
+                    } else {
+                        state.rightVol = 1.0;
+                        state.isAnimatingRight = false;
+                        updateUI();
+                    }
+                }
+            }
+        }
+
+        function drawWashingsTab() {
+            const groundY = height * 0.8;
+            const leftFlaskX = width * 0.25;
+            const rightFlaskX = width * 0.75;
+
+            // Common flask drawing parameters
+            const fNeckW = 30;
+            const fTopY = groundY - 260;
+            const fNeckBottomY = groundY - 110;
+            const fFlatW = 70;
+            const fBulge = 90;
+            const flaskMarkY = groundY - 210;
+
+            function buildFlaskPath(flaskX, offset = 0) {
+                ctx.beginPath();
+                ctx.moveTo(flaskX - fNeckW/2 + offset, fTopY);
+                ctx.lineTo(flaskX - fNeckW/2 + offset, fNeckBottomY);
+                ctx.bezierCurveTo(
+                    flaskX - fBulge + offset, fNeckBottomY + 15,
+                    flaskX - fBulge + offset, groundY - offset,
+                    flaskX - fFlatW/2 + offset, groundY - offset
+                );
+                ctx.lineTo(flaskX + fFlatW/2 - offset, groundY - offset);
+                ctx.bezierCurveTo(
+                    flaskX + fBulge - offset, groundY - offset,
+                    flaskX + fBulge - offset, fNeckBottomY + 15,
+                    flaskX + fNeckW/2 - offset, fNeckBottomY
+                );
+                ctx.lineTo(flaskX + fNeckW/2 - offset, fTopY);
+            }
+
+            // --- Left Flask: Without Washings ---
+            const leftWaterHeight = state.washWrongMoles * 210; // Full = 210px
+            
+            ctx.save();
+            buildFlaskPath(leftFlaskX, 3);
+            ctx.clip();
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.4)'; // Red tint
+            ctx.fillRect(leftFlaskX - fBulge, groundY - leftWaterHeight, fBulge * 2, leftWaterHeight);
+            ctx.restore();
+
+            // Flask mark and glass
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(leftFlaskX - fNeckW/2 - 15, flaskMarkY);
+            ctx.lineTo(leftFlaskX + fNeckW/2 + 15, flaskMarkY);
+            ctx.stroke();
+            ctx.fillStyle = '#ef4444';
+            ctx.font = '14px sans-serif';
+            ctx.fillText('1.0 dm³', leftFlaskX + fNeckW/2 + 25, flaskMarkY + 5);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 4;
+            buildFlaskPath(leftFlaskX, 0);
+            ctx.stroke();
+
+            // Small beaker icon above left flask showing residual solute
+            if (state.washLostMoles > 0 && state.washStage > 0) {
+                const beakerSmallX = leftFlaskX - 80;
+                const beakerSmallY = groundY - 320;
+                const bSmallW = 40;
+                const bSmallH = 50;
+                
+                // Mini beaker
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(beakerSmallX, beakerSmallY);
+                ctx.lineTo(beakerSmallX, beakerSmallY + bSmallH);
+                ctx.lineTo(beakerSmallX + bSmallW, beakerSmallY + bSmallH);
+                ctx.lineTo(beakerSmallX + bSmallW, beakerSmallY);
+                ctx.stroke();
+                
+                // Residual particles
+                for (let i = 0; i < 5; i++) {
+                    ctx.fillStyle = 'rgba(255, 100, 100, 0.8)';
+                    ctx.beginPath();
+                    ctx.arc(beakerSmallX + 10 + i * 6, beakerSmallY + bSmallH - 8, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Label
+                ctx.fillStyle = '#ef4444';
+                ctx.font = '11px sans-serif';
+                ctx.fillText('Lost!', beakerSmallX + 5, beakerSmallY - 5);
+            }
+
+            // --- Right Flask: With Washings ---
+            const rightWaterHeight = state.washRightMoles * 210;
+            
+            ctx.save();
+            buildFlaskPath(rightFlaskX, 3);
+            ctx.clip();
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.4)'; // Green tint
+            ctx.fillRect(rightFlaskX - fBulge, groundY - rightWaterHeight, fBulge * 2, rightWaterHeight);
+            ctx.restore();
+
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(rightFlaskX - fNeckW/2 - 15, flaskMarkY);
+            ctx.lineTo(rightFlaskX + fNeckW/2 + 15, flaskMarkY);
+            ctx.stroke();
+            ctx.fillStyle = '#22c55e';
+            ctx.fillText('1.0 dm³', rightFlaskX + fNeckW/2 + 25, flaskMarkY + 5);
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.lineWidth = 4;
+            buildFlaskPath(rightFlaskX, 0);
+            ctx.stroke();
+
+            // Washing animation particles
+            for (let p of washingParticles) {
+                if (p.opacity > 0) {
+                    ctx.fillStyle = `rgba(100, 200, 255, ${p.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // --- Animation Logic for Washings Tab ---
+            if (state.isAnimatingNoWash) {
+                if (state.washStage === 1) {
+                    // Simulate transfer with loss
+                    if (state.washWrongMoles > 0.85) {
+                        state.washWrongMoles -= 0.005;
+                        state.washLostMoles = 1.0 - state.washWrongMoles;
+                        updateUIWashings();
+                    } else {
+                        state.washWrongMoles = 0.85;
+                        state.washLostMoles = 0.15;
+                        state.washStage = 2;
+                        state.isAnimatingNoWash = false;
+                        updateUIWashings();
+                    }
+                }
+            }
+
+            if (state.isAnimatingWithWash) {
+                if (state.washStage === 1) {
+                    // Initial transfer (same as no wash)
+                    if (state.washRightMoles > 0.85) {
+                        state.washRightMoles -= 0.005;
+                        updateUIWashings();
+                    } else {
+                        state.washRightMoles = 0.85;
+                        state.washStage = 2;
+                        // Create washing particles
+                        for (let i = 0; i < 30; i++) {
+                            washingParticles.push({
+                                x: rightFlaskX - 80 + Math.random() * 40,
+                                y: groundY - 300 - Math.random() * 50,
+                                vy: 2 + Math.random() * 2,
+                                vx: (Math.random() - 0.5) * 1,
+                                r: 2 + Math.random() * 2,
+                                targetY: groundY - 100,
+                                opacity: 0.8,
+                                dissolved: false
+                            });
+                        }
+                    }
+                } else if (state.washStage === 2) {
+                    // Washing animation
+                    let allDissolved = true;
+                    for (let p of washingParticles) {
+                        if (!p.dissolved) {
+                            p.y += p.vy;
+                            p.x += p.vx;
+                            if (p.y >= p.targetY) {
+                                p.dissolved = true;
+                            } else {
+                                allDissolved = false;
+                            }
+                        } else if (p.opacity > 0) {
+                            p.opacity -= 0.02;
+                            allDissolved = false;
+                        }
+                    }
+                    
+                    if (allDissolved) {
+                        state.washStage = 3;
+                    }
+                } else if (state.washStage === 3) {
+                    // Recovery
+                    if (state.washRightMoles < 1.0) {
+                        state.washRightMoles += 0.003;
+                        state.washRecovered = state.washRightMoles - 0.85;
+                        updateUIWashings();
+                    } else {
+                        state.washRightMoles = 1.0;
+                        state.washRecovered = 0.15;
+                        state.isAnimatingWithWash = false;
+                        updateUIWashings();
+                    }
+                }
+            }
+
+            // Regular particles for initial dissolution
+            for (let p of particles) {
+                if (p.opacity > 0) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Animation State Logic (original tab logic)
+            if (state.isAnimatingWrong) {
+                let pDone = updateParticles();
+                
+                if (pDone && state.wrongMoles === 0) {
+                    state.wrongMoles = 1.0;
+                    updateUI();
+                }
+
+                if (pDone) {
+                    if (state.wrongVol < 1.08) {
+                        state.wrongVol += 0.002;
+                        updateUI();
+                    } else {
+                        state.wrongVol = 1.08;
+                        state.isAnimatingWrong = false;
+                        updateUI();
+                    }
+                }
+            }
+
+            if (state.isAnimatingRight) {
+                let pDone = updateParticles();
+                
+                if (pDone && state.rightMoles === 0) {
+                    state.rightMoles = 1.0;
+                    updateUI();
+                }
+
+                if (pDone) {
+                    if (state.rightVol < 1.0) {
+                        state.rightVol += 0.005;
+                        updateUI();
+                    } else {
+                        state.rightVol = 1.0;
+                        state.isAnimatingRight = false;
+                        updateUI();
+                    }
+                }
+            }
+        }
+
+        function gameLoop() {
+            draw();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // Start Loop
+        gameLoop();
+
+        function simulateWrong() {
+            if(state.isAnimatingWrong || state.wrongMoles >= 1.0) return;
+            state.isAnimatingWrong = true;
+            document.getElementById('btn-wrong').disabled = true;
+            document.getElementById('btn-wrong').classList.add('opacity-50', 'cursor-not-allowed');
+
+            createParticles(width * 0.25, height * 0.8);
+        }
+
+        function simulateRight() {
+            if(state.isAnimatingRight || state.rightMoles >= 1.0) return;
+            state.isAnimatingRight = true;
+            document.getElementById('btn-right').disabled = true;
+            document.getElementById('btn-right').classList.add('opacity-50', 'cursor-not-allowed');
+
+            createParticles(width * 0.75, height * 0.8);
+        }
+
+        function simulateNoWashings() {
+            if(state.isAnimatingNoWash || state.washStage > 0) return;
+            state.isAnimatingNoWash = true;
+            state.washStage = 1;
+            state.washWrongMoles = 1.0;
+            state.washLostMoles = 0;
+            document.getElementById('btn-no-wash').disabled = true;
+            document.getElementById('btn-no-wash').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function simulateWithWashings() {
+            if(state.isAnimatingWithWash || state.washStage > 0) return;
+            state.isAnimatingWithWash = true;
+            state.washStage = 1;
+            state.washRightMoles = 1.0;
+            state.washRecovered = 0;
+            document.getElementById('btn-with-wash').disabled = true;
+            document.getElementById('btn-with-wash').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function updateUIWashings() {
+            document.getElementById('wash-lost').innerText = `${state.washLostMoles.toFixed(2)} mol`;
+            document.getElementById('wash-wrong-moles').innerText = `${state.washWrongMoles.toFixed(2)} mol`;
+            
+            const wrongMolarity = state.washWrongMoles / 1.0;
+            document.getElementById('wash-wrong-molarity').innerText = `${wrongMolarity.toFixed(2)} M`;
+
+            document.getElementById('wash-recovered').innerText = `${state.washRecovered.toFixed(2)} mol`;
+            document.getElementById('wash-right-moles').innerText = `${state.washRightMoles.toFixed(2)} mol`;
+            
+            const rightMolarity = state.washRightMoles / 1.0;
+            document.getElementById('wash-right-molarity').innerText = `${rightMolarity.toFixed(2)} M`;
+        }
+
+        function updateUI() {
+            // Wrong Beaker Update
+            document.getElementById('wrong-moles').innerText = `${state.wrongMoles.toFixed(2)} mol`;
+            
+            // Map the visual 1.08 back to a slightly exaggerated >1.00 number for emphasis
+            let displayWrongVol = state.wrongVol === 1.0 ? 1.00 : 1.00 + (state.wrongVol - 1.0) * 0.5;
+            document.getElementById('wrong-vol').innerText = `${displayWrongVol.toFixed(2)} dm³`;
+            
+            if(state.wrongMoles > 0) {
+                const wMolarity = state.wrongMoles / displayWrongVol;
+                document.getElementById('wrong-molarity').innerText = `${wMolarity.toFixed(2)} M`;
+                
+                if (state.wrongVol > 1.0 && state.isAnimatingWrong) {
+                    document.getElementById('wrong-vol').classList.add('text-red-400');
+                }
+            }
+
+            // Right Flask Update
+            document.getElementById('right-moles').innerText = `${state.rightMoles.toFixed(2)} mol`;
+            document.getElementById('right-vol').innerText = `${state.rightVol.toFixed(2)} dm³`;
+            
+            if(state.rightMoles > 0 && state.rightVol >= 1.0) {
+                const rMolarity = state.rightMoles / state.rightVol;
+                document.getElementById('right-molarity').innerText = `${rMolarity.toFixed(2)} M`;
+            } else if (state.rightMoles > 0) {
+                document.getElementById('right-molarity').innerText = `Adding Water...`;
+            }
+        }
+
+        function resetSimulation() {
+            // Molarity tab state
+            state.wrongVol = 1.0;
+            state.wrongMoles = 0;
+            state.rightVol = 0.5;
+            state.rightMoles = 0;
+            state.isAnimatingWrong = false;
+            state.isAnimatingRight = false;
+            particles = [];
+
+            // Washings tab state
+            state.washLostMoles = 0;
+            state.washWrongMoles = 1.0;
+            state.washRightMoles = 1.0;
+            state.washRecovered = 0;
+            state.isAnimatingNoWash = false;
+            state.isAnimatingWithWash = false;
+            state.washStage = 0;
+            washingParticles = [];
+
+            // Reset UI - Molarity tab
+            document.getElementById('wrong-moles').innerText = `0.00 mol`;
+            document.getElementById('wrong-vol').innerText = `1.00 dm³`;
+            document.getElementById('wrong-molarity').innerText = `0.00 M`;
+            document.getElementById('wrong-vol').classList.remove('text-red-400');
+            
+            document.getElementById('right-moles').innerText = `0.00 mol`;
+            document.getElementById('right-vol').innerText = `0.50 dm³`;
+            document.getElementById('right-molarity').innerText = `Wait...`;
+
+            // Reset Buttons - Molarity tab
+            document.getElementById('btn-wrong').disabled = false;
+            document.getElementById('btn-wrong').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-right').disabled = false;
+            document.getElementById('btn-right').classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // Reset UI - Washings tab
+            document.getElementById('wash-lost').innerText = `0.00 mol`;
+            document.getElementById('wash-wrong-moles').innerText = `1.00 mol`;
+            document.getElementById('wash-wrong-molarity').innerText = `1.00 M`;
+            document.getElementById('wash-recovered').innerText = `0.00 mol`;
+            document.getElementById('wash-right-moles').innerText = `1.00 mol`;
+            document.getElementById('wash-right-molarity').innerText = `1.00 M`;
+
+            // Reset Buttons - Washings tab
+            document.getElementById('btn-no-wash').disabled = false;
+            document.getElementById('btn-no-wash').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-with-wash').disabled = false;
+            document.getElementById('btn-with-wash').classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            updateUI();
+            updateUIWashings();
+        }
+    </script>
+</body>
+</html>
