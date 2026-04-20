@@ -418,7 +418,9 @@
             pipRightConc: 1.0,
             isAnimatingNoRinse: false,
             isAnimatingWithRinse: false,
-            pipStage: 0 // 0: initial, 1: delivering, 2: complete
+            pipStage: 0, // 0: initial, 1: delivering, 2: complete
+            pipNoRinseFill: 0,
+            pipRinseFill: 0
         };
 
         let particles = [];
@@ -882,110 +884,363 @@
         }
 
         function drawPipetteTab() {
-            const groundY = height * 0.8;
-            const leftFlaskX = width * 0.25;
-            const rightFlaskX = width * 0.75;
+            const groundY = height * 0.85;
+            const leftX = width * 0.25;
+            const rightX = width * 0.75;
+            const time = Date.now() / 1000;
 
-            // Draw pipette and conical flask visualization
-            const pipetteWidth = 8;
-            const pipetteHeight = 150;
-            const flaskWidth = 100;
-            const flaskHeight = 120;
+            // ============ HELPER: Draw a realistic pipette ============
+            function drawPipette(cx, topY, solutionColor, waterDroplets, fillLevel, label) {
+                const bulbTop = topY + 30;
+                const bulbBot = topY + 90;
+                const stemW = 5;
+                const bulbW = 14;
+                const tipY = topY + 190;
+                const tipW = 3;
 
-            // --- Left Side: Without Rinsing ---
-            const leftPipY = groundY - 320;
-            
-            // Pipette
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.lineWidth = 3;
-            ctx.fillStyle = state.pipWaterResidue > 0 ? 'rgba(100, 150, 255, 0.5)' : 'transparent';
-            ctx.fillRect(leftFlaskX - pipetteWidth/2, leftPipY, pipetteWidth, pipetteHeight);
-            ctx.strokeRect(leftFlaskX - pipetteWidth/2, leftPipY, pipetteWidth, pipetteHeight);
-            
-            // Water droplets in pipette (wrong method)
-            if (state.pipWaterResidue > 0 && state.pipStage === 0) {
-                for (let i = 0; i < 3; i++) {
-                    ctx.fillStyle = 'rgba(100, 150, 255, 0.8)';
+                // --- Liquid inside pipette ---
+                if (fillLevel > 0) {
+                    ctx.save();
+                    // Clip to pipette inner shape
                     ctx.beginPath();
-                    ctx.arc(leftFlaskX, leftPipY + 30 + i * 15, 3, 0, Math.PI * 2);
-                    ctx.fill();
+                    // Upper stem
+                    ctx.moveTo(cx - stemW, topY);
+                    ctx.lineTo(cx - stemW, bulbTop);
+                    // Left bulb curve
+                    ctx.bezierCurveTo(cx - bulbW, bulbTop + 5, cx - bulbW, bulbBot - 5, cx - stemW, bulbBot);
+                    // Lower stem
+                    ctx.lineTo(cx - stemW, tipY - 15);
+                    // Tip taper
+                    ctx.lineTo(cx - tipW, tipY);
+                    ctx.lineTo(cx + tipW, tipY);
+                    ctx.lineTo(cx + stemW, tipY - 15);
+                    // Right side back up
+                    ctx.lineTo(cx + stemW, bulbBot);
+                    ctx.bezierCurveTo(cx + bulbW, bulbBot - 5, cx + bulbW, bulbTop + 5, cx + stemW, bulbTop);
+                    ctx.lineTo(cx + stemW, topY);
+                    ctx.closePath();
+                    ctx.clip();
+
+                    // Fill liquid from bottom up based on fillLevel (0-1)
+                    const liquidTopY = tipY - (tipY - topY) * fillLevel;
+                    ctx.fillStyle = solutionColor;
+                    ctx.fillRect(cx - bulbW - 2, liquidTopY, bulbW * 2 + 4, tipY - liquidTopY);
+                    ctx.restore();
+                }
+
+                // --- Water droplets (residue) ---
+                if (waterDroplets) {
+                    for (let i = 0; i < 4; i++) {
+                        const dy = bulbTop + 15 + i * 15;
+                        const wobble = Math.sin(time * 2 + i * 1.5) * 1.5;
+                        ctx.fillStyle = 'rgba(100, 170, 255, 0.7)';
+                        ctx.beginPath();
+                        // Teardrop shape
+                        ctx.ellipse(cx + wobble, dy, 3, 4, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                        // Highlight
+                        ctx.fillStyle = 'rgba(180, 220, 255, 0.5)';
+                        ctx.beginPath();
+                        ctx.arc(cx + wobble - 1, dy - 1.5, 1.2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    // Water film lining
+                    ctx.strokeStyle = 'rgba(100, 170, 255, 0.3)';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - stemW + 1, topY + 10);
+                    ctx.lineTo(cx - stemW + 1, bulbTop);
+                    ctx.bezierCurveTo(cx - bulbW + 2, bulbTop + 5, cx - bulbW + 2, bulbBot - 5, cx - stemW + 1, bulbBot);
+                    ctx.lineTo(cx - stemW + 1, tipY - 20);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx + stemW - 1, topY + 10);
+                    ctx.lineTo(cx + stemW - 1, bulbTop);
+                    ctx.bezierCurveTo(cx + bulbW - 2, bulbTop + 5, cx + bulbW - 2, bulbBot - 5, cx + stemW - 1, bulbBot);
+                    ctx.lineTo(cx + stemW - 1, tipY - 20);
+                    ctx.stroke();
+                }
+
+                // --- Pipette glass body ---
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 2;
+
+                // Left outline
+                ctx.beginPath();
+                ctx.moveTo(cx - stemW, topY);
+                ctx.lineTo(cx - stemW, bulbTop);
+                ctx.bezierCurveTo(cx - bulbW, bulbTop + 5, cx - bulbW, bulbBot - 5, cx - stemW, bulbBot);
+                ctx.lineTo(cx - stemW, tipY - 15);
+                ctx.lineTo(cx - tipW, tipY);
+                ctx.stroke();
+
+                // Right outline
+                ctx.beginPath();
+                ctx.moveTo(cx + stemW, topY);
+                ctx.lineTo(cx + stemW, bulbTop);
+                ctx.bezierCurveTo(cx + bulbW, bulbTop + 5, cx + bulbW, bulbBot - 5, cx + stemW, bulbBot);
+                ctx.lineTo(cx + stemW, tipY - 15);
+                ctx.lineTo(cx + tipW, tipY);
+                ctx.stroke();
+
+                // Graduation mark on bulb
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(cx - stemW - 2, bulbTop - 5);
+                ctx.lineTo(cx + stemW + 2, bulbTop - 5);
+                ctx.stroke();
+
+                // 25.0 cm³ label
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.font = '11px sans-serif';
+                ctx.fillText('25.0 cm³', cx + stemW + 8, bulbTop - 2);
+
+                // Rubber bulb at top
+                ctx.fillStyle = 'rgba(180, 60, 60, 0.8)';
+                ctx.beginPath();
+                ctx.ellipse(cx, topY - 8, 10, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(140, 40, 40, 0.9)';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+
+                return { tipX: cx, tipY: tipY };
+            }
+
+            // ============ HELPER: Draw a conical flask ============
+            function drawConicalFlask(cx, bottomY, liquidLevel, liquidColor, showMeniscus) {
+                const mouthW = 18;
+                const neckH = 50;
+                const bodyH = 130;
+                const baseW = 90;
+                const topY = bottomY - neckH - bodyH;
+
+                // Liquid (clipped to flask shape)
+                if (liquidLevel > 0) {
+                    ctx.save();
+                    ctx.beginPath();
+                    // Neck
+                    ctx.moveTo(cx - mouthW, topY);
+                    ctx.lineTo(cx - mouthW, topY + neckH);
+                    // Left shoulder to base
+                    ctx.lineTo(cx - baseW/2, bottomY);
+                    // Base
+                    ctx.lineTo(cx + baseW/2, bottomY);
+                    // Right base to shoulder
+                    ctx.lineTo(cx + mouthW, topY + neckH);
+                    ctx.lineTo(cx + mouthW, topY);
+                    ctx.closePath();
+                    ctx.clip();
+
+                    const liquidH = (bodyH + neckH) * liquidLevel;
+                    ctx.fillStyle = liquidColor;
+                    ctx.fillRect(cx - baseW/2 - 5, bottomY - liquidH, baseW + 10, liquidH);
+
+                    // Meniscus curve at top of liquid
+                    if (showMeniscus && liquidLevel > 0.1) {
+                        const menY = bottomY - liquidH;
+                        const grad = ctx.createLinearGradient(cx, menY - 5, cx, menY + 5);
+                        grad.addColorStop(0, 'rgba(255,255,255,0.15)');
+                        grad.addColorStop(1, 'transparent');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.moveTo(cx - baseW/2, menY);
+                        ctx.quadraticCurveTo(cx, menY + 6, cx + baseW/2, menY);
+                        ctx.lineTo(cx + baseW/2, menY - 5);
+                        ctx.lineTo(cx - baseW/2, menY - 5);
+                        ctx.fill();
+                    }
+                    ctx.restore();
+                }
+
+                // Flask glass outline
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+                ctx.lineWidth = 3;
+
+                // Left side
+                ctx.beginPath();
+                ctx.moveTo(cx - mouthW, topY);
+                ctx.lineTo(cx - mouthW, topY + neckH);
+                ctx.lineTo(cx - baseW/2, bottomY);
+                ctx.stroke();
+
+                // Right side
+                ctx.beginPath();
+                ctx.moveTo(cx + mouthW, topY);
+                ctx.lineTo(cx + mouthW, topY + neckH);
+                ctx.lineTo(cx + baseW/2, bottomY);
+                ctx.stroke();
+
+                // Base
+                ctx.beginPath();
+                ctx.moveTo(cx - baseW/2, bottomY);
+                ctx.lineTo(cx + baseW/2, bottomY);
+                ctx.stroke();
+
+                // Glass rim highlight
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.ellipse(cx, topY, mouthW, 3, 0, 0, Math.PI * 2);
+                ctx.stroke();
+
+                return { mouthX: cx, mouthY: topY };
+            }
+
+            // ============ LEFT SIDE: Without Rinsing ============
+            const leftPipTop = groundY - 400;
+            const leftFlaskBot = groundY;
+
+            // Draw conical flask first (behind pipette)
+            const leftLiquid = state.isAnimatingNoRinse || state.pipStage > 0 
+                ? Math.min(state.pipNoRinseFill || 0, 0.35) 
+                : 0;
+            drawConicalFlask(leftX, leftFlaskBot, leftLiquid, 'rgba(239, 100, 100, 0.35)', true);
+
+            // Draw pipette
+            const leftFill = state.pipStage === 0 ? 0.8 : Math.max(0.8 - (state.pipNoRinseFill || 0) * 2, 0.1);
+            const leftTip = drawPipette(leftX, leftPipTop, 
+                'rgba(59, 130, 246, 0.45)', 
+                state.pipWaterResidue > 0, 
+                leftFill,
+                'Without Rinsing');
+
+            // Drip animation particles for left
+            if (state.isAnimatingNoRinse && state.pipStage === 1) {
+                // Create drip particles periodically
+                if (Math.random() < 0.15) {
+                    pipetteParticles.push({
+                        x: leftX + (Math.random() - 0.5) * 4,
+                        y: leftTip.tipY,
+                        vy: 2 + Math.random() * 3,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        r: 2 + Math.random() * 2,
+                        targetY: leftFlaskBot - 60,
+                        opacity: 0.9,
+                        dissolved: false,
+                        side: 'left',
+                        color: 'rgba(100, 150, 255, 0.8)'
+                    });
                 }
             }
 
-            // Conical flask
-            ctx.beginPath();
-            ctx.moveTo(leftFlaskX - flaskWidth/2, groundY - flaskHeight);
-            ctx.lineTo(leftFlaskX - 20, groundY - 30);
-            ctx.lineTo(leftFlaskX - 20, groundY);
-            ctx.lineTo(leftFlaskX + 20, groundY);
-            ctx.lineTo(leftFlaskX + 20, groundY - 30);
-            ctx.lineTo(leftFlaskX + flaskWidth/2, groundY - flaskHeight);
-            ctx.stroke();
-            
-            // Solution in flask (diluted - red tint)
-            if (state.pipStage > 0) {
-                ctx.fillStyle = 'rgba(239, 68, 68, 0.4)';
-                ctx.beginPath();
-                ctx.moveTo(leftFlaskX - 20, groundY - 30);
-                ctx.lineTo(leftFlaskX - 20, groundY);
-                ctx.lineTo(leftFlaskX + 20, groundY);
-                ctx.lineTo(leftFlaskX + 20, groundY - 30);
-                ctx.lineTo(leftFlaskX - 15, groundY - 50);
-                ctx.fill();
+            // Warning label for water residue
+            if (state.pipWaterResidue > 0 && state.pipStage < 2) {
+                ctx.save();
+                const pulse = 0.7 + Math.sin(time * 3) * 0.3;
+                ctx.globalAlpha = pulse;
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠ Water residue', leftX, leftPipTop - 15);
+                ctx.fillText('inside pipette!', leftX, leftPipTop - 2);
+                ctx.restore();
+                ctx.textAlign = 'start';
             }
 
-            // --- Right Side: With Rinsing ---
-            const rightPipY = groundY - 320;
-            
-            // Pipette
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.lineWidth = 3;
-            ctx.fillStyle = 'transparent';
-            ctx.fillRect(rightFlaskX - pipetteWidth/2, rightPipY, pipetteWidth, pipetteHeight);
-            ctx.strokeRect(rightFlaskX - pipetteWidth/2, rightPipY, pipetteWidth, pipetteHeight);
+            // Result label
+            if (state.pipStage === 2 && !state.isAnimatingNoRinse) {
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('✗ Diluted!', leftX, leftFlaskBot + 25);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Conc. = ${state.pipWrongConc.toFixed(2)} M`, leftX, leftFlaskBot + 42);
+                ctx.textAlign = 'start';
+            }
 
-            // Rinsing animation particles
+            // ============ RIGHT SIDE: With Rinsing ============
+            const rightPipTop = groundY - 400;
+            const rightFlaskBot = groundY;
+
+            // Draw conical flask
+            const rightLiquid = state.isAnimatingWithRinse || state.pipStage > 0 
+                ? Math.min(state.pipRinseFill || 0, 0.35)
+                : 0;
+            drawConicalFlask(rightX, rightFlaskBot, rightLiquid, 'rgba(34, 197, 94, 0.35)', true);
+
+            // Draw pipette (no water residue)
+            const rightFill = state.pipStage === 0 ? 0.8 : Math.max(0.8 - (state.pipRinseFill || 0) * 2, 0.1);
+            const rightTip = drawPipette(rightX, rightPipTop,
+                'rgba(59, 130, 246, 0.45)',
+                false,
+                rightFill,
+                'With Rinsing');
+
+            // Drip animation particles for right
+            if (state.isAnimatingWithRinse && state.pipStage === 1) {
+                if (Math.random() < 0.15) {
+                    pipetteParticles.push({
+                        x: rightX + (Math.random() - 0.5) * 4,
+                        y: rightTip.tipY,
+                        vy: 2 + Math.random() * 3,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        r: 2 + Math.random() * 2,
+                        targetY: rightFlaskBot - 60,
+                        opacity: 0.9,
+                        dissolved: false,
+                        side: 'right',
+                        color: 'rgba(59, 130, 246, 0.8)'
+                    });
+                }
+            }
+
+            // Rinsed checkmark
+            if (state.pipStage >= 1 && (state.isAnimatingWithRinse || state.pipStage === 2)) {
+                ctx.fillStyle = '#22c55e';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('✓ Rinsed with solution', rightX, rightPipTop - 8);
+                ctx.textAlign = 'start';
+            }
+
+            // Result label
+            if (state.pipStage === 2 && !state.isAnimatingWithRinse) {
+                ctx.fillStyle = '#22c55e';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('✓ Accurate!', rightX, rightFlaskBot + 25);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Conc. = ${state.pipRightConc.toFixed(2)} M`, rightX, rightFlaskBot + 42);
+                ctx.textAlign = 'start';
+            }
+
+            // ============ Draw & Update all particles ============
             for (let p of pipetteParticles) {
                 if (p.opacity > 0) {
-                    ctx.fillStyle = `rgba(34, 197, 94, ${p.opacity})`;
+                    ctx.fillStyle = p.color || `rgba(59, 130, 246, ${p.opacity})`;
+                    ctx.globalAlpha = p.opacity;
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
                     ctx.fill();
+                    ctx.globalAlpha = 1.0;
                 }
             }
 
-            // Conical flask
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-            ctx.beginPath();
-            ctx.moveTo(rightFlaskX - flaskWidth/2, groundY - flaskHeight);
-            ctx.lineTo(rightFlaskX - 20, groundY - 30);
-            ctx.lineTo(rightFlaskX - 20, groundY);
-            ctx.lineTo(rightFlaskX + 20, groundY);
-            ctx.lineTo(rightFlaskX + 20, groundY - 30);
-            ctx.lineTo(rightFlaskX + flaskWidth/2, groundY - flaskHeight);
-            ctx.stroke();
-            
-            // Solution in flask (correct - green tint)
-            if (state.pipStage > 0) {
-                ctx.fillStyle = 'rgba(34, 197, 94, 0.4)';
-                ctx.beginPath();
-                ctx.moveTo(rightFlaskX - 20, groundY - 30);
-                ctx.lineTo(rightFlaskX - 20, groundY);
-                ctx.lineTo(rightFlaskX + 20, groundY);
-                ctx.lineTo(rightFlaskX + 20, groundY - 30);
-                ctx.lineTo(rightFlaskX - 15, groundY - 50);
-                ctx.fill();
-            }
-
-            // --- Animation Logic for Pipette Tab ---
+            // ============ Animation Logic ============
             if (state.isAnimatingNoRinse) {
                 if (state.pipStage === 1) {
-                    // Simulate dilution from water residue
+                    state.pipNoRinseFill = (state.pipNoRinseFill || 0) + 0.003;
+                    
+                    // Update particles
+                    for (let p of pipetteParticles) {
+                        if (!p.dissolved) {
+                            p.y += p.vy;
+                            p.x += p.vx;
+                            if (p.y >= p.targetY) p.dissolved = true;
+                        } else if (p.opacity > 0) {
+                            p.opacity -= 0.04;
+                        }
+                    }
+
                     if (state.pipWrongConc > 0.93) {
-                        state.pipWrongConc -= 0.002;
+                        state.pipWrongConc -= 0.001;
+                        state.pipWaterResidue = 1.8;
                         updateUIPipette();
                     } else {
-                        state.pipWrongConc = 0.93; // ~7% dilution from residual water
+                        state.pipWrongConc = 0.93;
+                        state.pipNoRinseFill = 0.35;
                         state.pipStage = 2;
                         state.isAnimatingNoRinse = false;
                         updateUIPipette();
@@ -995,25 +1250,23 @@
 
             if (state.isAnimatingWithRinse) {
                 if (state.pipStage === 1) {
-                    // Rinsing animation
-                    let allDone = true;
+                    state.pipRinseFill = (state.pipRinseFill || 0) + 0.003;
+
+                    // Update particles
                     for (let p of pipetteParticles) {
                         if (!p.dissolved) {
                             p.y += p.vy;
-                            if (p.y >= p.targetY) {
-                                p.dissolved = true;
-                            } else {
-                                allDone = false;
-                            }
+                            p.x += p.vx;
+                            if (p.y >= p.targetY) p.dissolved = true;
                         } else if (p.opacity > 0) {
-                            p.opacity -= 0.03;
-                            allDone = false;
+                            p.opacity -= 0.04;
                         }
                     }
-                    
-                    if (allDone) {
+
+                    if (state.pipRinseFill >= 0.35) {
+                        state.pipRinseFill = 0.35;
                         state.pipStage = 2;
-                        state.pipRightConc = 1.0; // No dilution
+                        state.pipRightConc = 1.0;
                         state.isAnimatingWithRinse = false;
                         updateUIPipette();
                     }
@@ -1073,6 +1326,7 @@
             state.pipStage = 1;
             state.pipWaterResidue = 1.8; // ~1.8 cm³ residual water
             state.pipWrongConc = 1.0;
+            state.pipNoRinseFill = 0;
             document.getElementById('btn-no-rinse').disabled = true;
             document.getElementById('btn-no-rinse').classList.add('opacity-50', 'cursor-not-allowed');
         }
@@ -1083,19 +1337,7 @@
             state.pipStage = 1;
             state.pipWaterResidue = 0;
             state.pipRightConc = 1.0;
-            
-            // Create rinsing particles
-            for (let i = 0; i < 20; i++) {
-                pipetteParticles.push({
-                    x: width * 0.75 + (Math.random() - 0.5) * 10,
-                    y: height * 0.8 - 320 + Math.random() * 100,
-                    vy: 2 + Math.random() * 2,
-                    r: 2 + Math.random() * 2,
-                    targetY: height * 0.8 - 150,
-                    opacity: 0.8,
-                    dissolved: false
-                });
-            }
+            state.pipRinseFill = 0;
             
             document.getElementById('btn-with-rinse').disabled = true;
             document.getElementById('btn-with-rinse').classList.add('opacity-50', 'cursor-not-allowed');
@@ -1179,6 +1421,8 @@
             state.isAnimatingNoRinse = false;
             state.isAnimatingWithRinse = false;
             state.pipStage = 0;
+            state.pipNoRinseFill = 0;
+            state.pipRinseFill = 0;
             pipetteParticles = [];
 
             // Reset UI - Molarity tab
