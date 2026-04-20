@@ -65,6 +65,9 @@
             <button onclick="switchTab('burette')" id="tab-burette" class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive">
                 <i class="fas fa-fill-drip mr-1"></i> Burette Rinsing
             </button>
+            <button onclick="switchTab('endpoint')" id="tab-endpoint" class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive">
+                <i class="fas fa-bullseye mr-1"></i> Equiv. vs End Pt
+            </button>
         </div>
 
         <!-- Tab 1: Molarity Misconception -->
@@ -331,6 +334,67 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab 5: Equivalence Point vs End Point -->
+        <div id="content-endpoint" class="flex-1 flex flex-col gap-4 hidden">
+            <div class="glass-panel p-5 rounded-xl shadow-lg">
+                <h3 class="text-xl font-bold text-blue-400 mb-3"><i class="fas fa-bullseye mr-2"></i>Equivalence Point</h3>
+                <p class="text-slate-300 text-sm mb-2 leading-relaxed">
+                    The point at which the <strong>exact stoichiometric amount</strong> of titrant has been added to completely react with the analyte. This is a <strong>theoretical</strong> point.
+                </p>
+                <div class="bg-slate-800 p-3 rounded-lg text-center mb-3 border border-slate-700">
+                    $$n_{\text{acid}} = n_{\text{base}} \quad \text{(for 1:1 reactions)}$$
+                </div>
+                
+                <div class="mt-4 border-t border-slate-700 pt-4">
+                    <h3 class="text-xl font-bold text-amber-400 mb-3"><i class="fas fa-eye-dropper mr-2"></i>End Point</h3>
+                    <p class="text-slate-300 text-sm mb-3 leading-relaxed">
+                        The point at which the <strong>indicator changes colour</strong>, signalling the reaction is complete. This is an <strong>experimental observation</strong>.
+                    </p>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        The end point should be as <strong>close as possible</strong> to the equivalence point, but they are <strong>not exactly the same</strong>. The difference between them is the <strong>titration error</strong>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Dynamic Output -->
+            <div class="flex-grow flex flex-col gap-4">
+                <div class="bg-blue-950/30 border border-blue-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+                    <h4 class="font-bold text-blue-300 mb-2">Titration Progress</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Volume NaOH added:</span>
+                        <span class="text-right font-mono text-slate-200" id="ep-vol-added">0.0 cm³</span>
+                        
+                        <span class="text-slate-400">Current pH:</span>
+                        <span class="text-right font-mono text-slate-200" id="ep-current-ph">1.0</span>
+                        
+                        <span class="text-slate-400">Flask colour:</span>
+                        <span class="text-right font-mono text-slate-200" id="ep-flask-colour">Colourless</span>
+                    </div>
+                </div>
+
+                <div class="bg-purple-950/30 border border-purple-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-purple-500"></div>
+                    <h4 class="font-bold text-purple-300 mb-2">Key Points</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Equivalence point:</span>
+                        <span class="text-right font-mono text-blue-300" id="ep-equiv">pH 7.0 at 25.0 cm³</span>
+                        
+                        <span class="text-slate-400">End point:</span>
+                        <span class="text-right font-mono text-amber-300" id="ep-endpt">Waiting...</span>
+                        
+                        <span class="text-slate-400 font-bold mt-2">Titration error:</span>
+                        <span class="text-right font-mono text-slate-200 font-bold mt-2" id="ep-error">—</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-800/50 border border-slate-700 p-3 rounded-lg text-xs text-slate-400">
+                    <strong class="text-slate-300">Indicator:</strong> Phenolphthalein (colourless in acid → pink in alkali, pH range 8.2–10.0)
+                    <br><strong class="text-slate-300">Reaction:</strong> HCl(aq) + NaOH(aq) → NaCl(aq) + H₂O(l)
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Right Area: 2D Canvas & Controls -->
@@ -382,6 +446,10 @@
                 <div class="absolute top-[8%] left-3/4 transform -translate-x-1/2 text-center pointer-events-none z-10 drop-shadow-md">
                     <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">With Rinsing</span>
                 </div>
+            </div>
+
+            <!-- Overlays for Tab 5 -->
+            <div id="overlay-endpoint" class="hidden">
             </div>
         </div>
 
@@ -436,6 +504,16 @@
                 <i class="fas fa-undo"></i> Reset
             </button>
         </div>
+
+        <!-- Controls Panel (Bottom) - Tab 5 -->
+        <div id="controls-endpoint" class="h-24 bg-slate-900 border-t border-slate-700 p-4 flex justify-center items-center gap-4 z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] hidden">
+            <button onclick="startTitration()" id="btn-titrate" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-blue-900/50 flex items-center gap-2">
+                <i class="fas fa-play"></i> Start Titration
+            </button>
+            <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center gap-2">
+                <i class="fas fa-undo"></i> Reset
+            </button>
+        </div>
     </div>
 
     <!-- HTML5 Canvas 2D Simulation Script -->
@@ -458,24 +536,30 @@
             document.getElementById('tab-burette').className = tab === 'burette' 
                 ? 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-active'
                 : 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive';
+            document.getElementById('tab-endpoint').className = tab === 'endpoint' 
+                ? 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-active'
+                : 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive';
             
             // Update content
             document.getElementById('content-molarity').classList.toggle('hidden', tab !== 'molarity');
             document.getElementById('content-washings').classList.toggle('hidden', tab !== 'washings');
             document.getElementById('content-pipette').classList.toggle('hidden', tab !== 'pipette');
             document.getElementById('content-burette').classList.toggle('hidden', tab !== 'burette');
+            document.getElementById('content-endpoint').classList.toggle('hidden', tab !== 'endpoint');
             
             // Update overlays
             document.getElementById('overlay-molarity').classList.toggle('hidden', tab !== 'molarity');
             document.getElementById('overlay-washings').classList.toggle('hidden', tab !== 'washings');
             document.getElementById('overlay-pipette').classList.toggle('hidden', tab !== 'pipette');
             document.getElementById('overlay-burette').classList.toggle('hidden', tab !== 'burette');
+            document.getElementById('overlay-endpoint').classList.toggle('hidden', tab !== 'endpoint');
             
             // Update controls
             document.getElementById('controls-molarity').classList.toggle('hidden', tab !== 'molarity');
             document.getElementById('controls-washings').classList.toggle('hidden', tab !== 'washings');
             document.getElementById('controls-pipette').classList.toggle('hidden', tab !== 'pipette');
             document.getElementById('controls-burette').classList.toggle('hidden', tab !== 'burette');
+            document.getElementById('controls-endpoint').classList.toggle('hidden', tab !== 'endpoint');
             
             resetSimulation();
         }
@@ -522,7 +606,12 @@
             burLeftLevel: 0.0,
             burRightLevel: 0.0,
             burLeftDrip: 0,
-            burRightDrip: 0
+            burRightDrip: 0,
+            // Endpoint tab
+            epVolAdded: 0,
+            epIsAnimating: false,
+            epEndpointReached: false,
+            epEquivReached: false
         };
 
         let particles = [];
@@ -585,8 +674,10 @@
                 drawWashingsTab();
             } else if (currentTab === 'pipette') {
                 drawPipetteTab();
-            } else {
+            } else if (currentTab === 'burette') {
                 drawBuretteTab();
+            } else {
+                drawEndpointTab();
             }
         }
 
@@ -1665,6 +1756,323 @@
             buretteParticles = buretteParticles.filter(p => p.opacity > 0);
         }
 
+        function drawEndpointTab() {
+            const time = Date.now() / 1000;
+            // Layout: left = titration curve, right = conical flask
+            const chartLeft = 50;
+            const chartTop = 40;
+            const chartW = width * 0.55 - 80;
+            const chartH = height - 120;
+            const flaskCX = width * 0.55 + (width * 0.45) / 2;
+            const flaskBotY = height * 0.82;
+
+            // pH calculation for strong acid-strong base titration
+            // HCl (25.0 cm³, 0.1M) vs NaOH (0.1M)
+            function calcPH(vol) {
+                const va = 25.0, ca = 0.1, cb = 0.1;
+                const molesAcid = va * ca / 1000;
+                const molesBase = vol * cb / 1000;
+                const totalVol = (va + vol) / 1000;
+                if (vol < 24.9) {
+                    const excessH = (molesAcid - molesBase) / totalVol;
+                    return -Math.log10(excessH);
+                } else if (vol <= 25.1) {
+                    return 7.0;
+                } else {
+                    const excessOH = (molesBase - molesAcid) / totalVol;
+                    const pOH = -Math.log10(excessOH);
+                    return 14 - pOH;
+                }
+            }
+
+            // Phenolphthalein: colourless below 8.2, transition 8.2-10, pink above 10
+            function indicatorColor(pH) {
+                if (pH < 8.2) return { r: 200, g: 200, b: 220, a: 0.15 };
+                if (pH > 10.0) return { r: 220, g: 50, b: 120, a: 0.5 };
+                const t = (pH - 8.2) / 1.8;
+                return { r: 200 + 20*t, g: 200 - 150*t, b: 220 - 100*t, a: 0.15 + 0.35*t };
+            }
+
+            const currentVol = state.epVolAdded;
+            const currentPH = calcPH(currentVol);
+            const col = indicatorColor(currentPH);
+
+            // ============ DRAW TITRATION CURVE ============
+            // Axes
+            ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(chartLeft, chartTop);
+            ctx.lineTo(chartLeft, chartTop + chartH);
+            ctx.lineTo(chartLeft + chartW, chartTop + chartH);
+            ctx.stroke();
+
+            // Axis labels
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Volume of NaOH added (cm³)', chartLeft + chartW/2, chartTop + chartH + 35);
+            
+            ctx.save();
+            ctx.translate(15, chartTop + chartH/2);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText('pH', 0, 0);
+            ctx.restore();
+            ctx.textAlign = 'start';
+
+            // Y-axis ticks (pH 0-14)
+            ctx.font = '10px sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.4)';
+            for (let pH = 0; pH <= 14; pH += 2) {
+                const y = chartTop + chartH - (pH / 14) * chartH;
+                ctx.fillText(pH.toString(), chartLeft - 20, y + 4);
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(chartLeft, y);
+                ctx.lineTo(chartLeft + chartW, y);
+                ctx.stroke();
+            }
+
+            // X-axis ticks (0-50 cm³)
+            for (let v = 0; v <= 50; v += 10) {
+                const x = chartLeft + (v / 50) * chartW;
+                ctx.fillText(v.toString(), x - 5, chartTop + chartH + 15);
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.beginPath();
+                ctx.moveTo(x, chartTop);
+                ctx.lineTo(x, chartTop + chartH);
+                ctx.stroke();
+            }
+
+            // Draw the full curve faintly as guide
+            ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            for (let v = 0; v <= 50; v += 0.2) {
+                const pH = calcPH(v);
+                const x = chartLeft + (v / 50) * chartW;
+                const y = chartTop + chartH - (pH / 14) * chartH;
+                if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw the animated curve up to currentVol
+            if (currentVol > 0) {
+                // Gradient color for the curve
+                const grad = ctx.createLinearGradient(chartLeft, 0, chartLeft + chartW, 0);
+                grad.addColorStop(0, '#ef4444');
+                grad.addColorStop(0.45, '#f97316');
+                grad.addColorStop(0.5, '#3b82f6');
+                grad.addColorStop(0.55, '#8b5cf6');
+                grad.addColorStop(1, '#8b5cf6');
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                for (let v = 0; v <= currentVol; v += 0.2) {
+                    const pH = calcPH(v);
+                    const x = chartLeft + (v / 50) * chartW;
+                    const y = chartTop + chartH - (pH / 14) * chartH;
+                    if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                // Current point dot
+                const dotX = chartLeft + (currentVol / 50) * chartW;
+                const dotY = chartTop + chartH - (currentPH / 14) * chartH;
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(dotX, dotY, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // Equivalence point marker (always shown)
+            const eqX = chartLeft + (25.0 / 50) * chartW;
+            const eqY = chartTop + chartH - (7.0 / 14) * chartH;
+            
+            // Vertical dashed line at equivalence point
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(eqX, chartTop);
+            ctx.lineTo(eqX, chartTop + chartH);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Horizontal dashed line at pH 7
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.3)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(chartLeft, eqY);
+            ctx.lineTo(chartLeft + chartW, eqY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Equivalence point label
+            if (currentVol >= 25.0) {
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.arc(eqX, eqY, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#93c5fd';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Equivalence Point', eqX, eqY - 14);
+                ctx.fillText('pH 7.0, 25.0 cm³', eqX, eqY - 2);
+            }
+
+            // End point marker (phenolphthalein: pH ~8.2-10, appears around ~25.2 cm³)
+            const endPointVol = 25.15; // slight overshoot
+            const endPointPH = calcPH(endPointVol);
+            if (currentVol >= endPointVol) {
+                const epX = chartLeft + (endPointVol / 50) * chartW;
+                const epY = chartTop + chartH - (endPointPH / 14) * chartH;
+                
+                const pulse = 0.7 + Math.sin(time * 3) * 0.3;
+                ctx.fillStyle = `rgba(245, 158, 11, ${pulse})`;
+                ctx.beginPath();
+                ctx.arc(epX, epY, 6, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('End Point', epX + 50, epY - 10);
+                ctx.fillText('(indicator changes)', epX + 50, epY + 2);
+            }
+
+            // Phenolphthalein range shading (pH 8.2-10)
+            const phthTopY = chartTop + chartH - (10 / 14) * chartH;
+            const phthBotY = chartTop + chartH - (8.2 / 14) * chartH;
+            ctx.fillStyle = 'rgba(220, 50, 120, 0.08)';
+            ctx.fillRect(chartLeft, phthTopY, chartW, phthBotY - phthTopY);
+            ctx.fillStyle = 'rgba(220, 80, 140, 0.4)';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('Phenolphthalein', chartLeft + chartW - 5, phthTopY + 12);
+            ctx.fillText('range (8.2–10.0)', chartLeft + chartW - 5, phthTopY + 23);
+            ctx.textAlign = 'start';
+
+            // ============ DRAW CONICAL FLASK ============
+            const mouthW = 22;
+            const neckH = 55;
+            const bodyH = 140;
+            const baseW = 110;
+            const fTopY = flaskBotY - neckH - bodyH;
+
+            // Liquid in flask
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(flaskCX - mouthW, fTopY);
+            ctx.lineTo(flaskCX - mouthW, fTopY + neckH);
+            ctx.lineTo(flaskCX - baseW/2, flaskBotY);
+            ctx.lineTo(flaskCX + baseW/2, flaskBotY);
+            ctx.lineTo(flaskCX + mouthW, fTopY + neckH);
+            ctx.lineTo(flaskCX + mouthW, fTopY);
+            ctx.closePath();
+            ctx.clip();
+
+            const liquidLevel = 0.45;
+            const liqH = (bodyH + neckH) * liquidLevel;
+            ctx.fillStyle = `rgba(${col.r}, ${col.g}, ${col.b}, ${col.a})`;
+            ctx.fillRect(flaskCX - baseW/2, flaskBotY - liqH, baseW, liqH);
+            ctx.restore();
+
+            // Flask glass
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(flaskCX - mouthW, fTopY);
+            ctx.lineTo(flaskCX - mouthW, fTopY + neckH);
+            ctx.lineTo(flaskCX - baseW/2, flaskBotY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(flaskCX + mouthW, fTopY);
+            ctx.lineTo(flaskCX + mouthW, fTopY + neckH);
+            ctx.lineTo(flaskCX + baseW/2, flaskBotY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(flaskCX - baseW/2, flaskBotY);
+            ctx.lineTo(flaskCX + baseW/2, flaskBotY);
+            ctx.stroke();
+
+            // Colour label below flask
+            ctx.textAlign = 'center';
+            if (currentPH >= 10) {
+                ctx.fillStyle = '#ec4899';
+                ctx.font = 'bold 16px sans-serif';
+                ctx.fillText('🌸 Pink!', flaskCX, flaskBotY + 25);
+            } else if (currentPH >= 8.2) {
+                const pulse = 0.5 + Math.sin(time * 4) * 0.5;
+                ctx.fillStyle = `rgba(236, 72, 153, ${pulse})`;
+                ctx.font = 'bold 14px sans-serif';
+                ctx.fillText('Faint pink appearing...', flaskCX, flaskBotY + 25);
+            } else {
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.font = '13px sans-serif';
+                ctx.fillText('Colourless', flaskCX, flaskBotY + 25);
+            }
+
+            // Title above flask
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.font = 'bold 13px sans-serif';
+            ctx.fillText('Conical Flask', flaskCX, fTopY - 15);
+            ctx.font = '11px sans-serif';
+            ctx.fillText('25.0 cm³ HCl + Phenolphthalein', flaskCX, fTopY - 2);
+            ctx.textAlign = 'start';
+
+            // ============ Animation ============
+            if (state.epIsAnimating) {
+                state.epVolAdded += 0.12;
+
+                // Check for equivalence point
+                if (state.epVolAdded >= 25.0 && !state.epEquivReached) {
+                    state.epEquivReached = true;
+                }
+
+                // Check for end point (indicator colour change ~pH 8.2+)
+                const pH = calcPH(state.epVolAdded);
+                if (pH >= 8.2 && !state.epEndpointReached) {
+                    state.epEndpointReached = true;
+                    document.getElementById('ep-endpt').innerText = `pH ${pH.toFixed(1)} at ${state.epVolAdded.toFixed(1)} cm³`;
+                    const error = state.epVolAdded - 25.0;
+                    document.getElementById('ep-error').innerText = `+${error.toFixed(2)} cm³`;
+                }
+
+                // Update UI
+                document.getElementById('ep-vol-added').innerText = `${state.epVolAdded.toFixed(1)} cm³`;
+                document.getElementById('ep-current-ph').innerText = pH.toFixed(1);
+                
+                if (pH >= 10) {
+                    document.getElementById('ep-flask-colour').innerHTML = '<span class="text-pink-400">Pink</span>';
+                } else if (pH >= 8.2) {
+                    document.getElementById('ep-flask-colour').innerHTML = '<span class="text-pink-300">Faint pink</span>';
+                } else {
+                    document.getElementById('ep-flask-colour').innerText = 'Colourless';
+                }
+
+                if (state.epVolAdded >= 35) {
+                    state.epVolAdded = 35;
+                    state.epIsAnimating = false;
+                }
+            }
+        }
+
+        function startTitration() {
+            if (state.epIsAnimating || state.epVolAdded >= 35) return;
+            state.epIsAnimating = true;
+            state.epVolAdded = 0;
+            state.epEquivReached = false;
+            state.epEndpointReached = false;
+            document.getElementById('ep-endpt').innerText = 'Waiting...';
+            document.getElementById('ep-error').innerText = '—';
+            document.getElementById('btn-titrate').disabled = true;
+            document.getElementById('btn-titrate').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
         function gameLoop() {
             draw();
             animationId = requestAnimationFrame(gameLoop);
@@ -1863,6 +2271,12 @@
             state.burRightDrip = 0;
             buretteParticles = [];
 
+            // Endpoint tab state
+            state.epVolAdded = 0;
+            state.epIsAnimating = false;
+            state.epEndpointReached = false;
+            state.epEquivReached = false;
+
             // Reset UI - Molarity tab
             document.getElementById('wrong-moles').innerText = `0.00 mol`;
             document.getElementById('wrong-vol').innerText = `1.00 dm³`;
@@ -1917,6 +2331,15 @@
             document.getElementById('btn-no-bur-rinse').classList.remove('opacity-50', 'cursor-not-allowed');
             document.getElementById('btn-with-bur-rinse').disabled = false;
             document.getElementById('btn-with-bur-rinse').classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // Reset UI - Endpoint tab
+            document.getElementById('ep-vol-added').innerText = `0.0 cm³`;
+            document.getElementById('ep-current-ph').innerText = `1.0`;
+            document.getElementById('ep-flask-colour').innerText = `Colourless`;
+            document.getElementById('ep-endpt').innerText = `Waiting...`;
+            document.getElementById('ep-error').innerText = `—`;
+            document.getElementById('btn-titrate').disabled = false;
+            document.getElementById('btn-titrate').classList.remove('opacity-50', 'cursor-not-allowed');
             
             updateUI();
             updateUIWashings();
