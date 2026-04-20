@@ -667,11 +667,14 @@
 
         <!-- Controls Panel (Bottom) - Tab 7 -->
         <div id="controls-conical" class="h-24 bg-slate-900 border-t border-slate-700 p-4 flex justify-center items-center gap-4 z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] hidden">
-            <button onclick="simulateCFRinse()" id="btn-cf-rinse" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-red-900/50 flex items-center gap-2">
-                <i class="fas fa-times"></i> Rinse with Analyte
+            <button onclick="simulateCFStep1Wrong()" id="btn-cf-rinse" class="bg-red-600 hover:bg-red-500 text-white px-5 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-red-900/50 flex items-center gap-2 text-sm">
+                <i class="fas fa-flask"></i> Step 1: Rinse with Analyte
             </button>
-            <button onclick="simulateCFWater()" id="btn-cf-water" class="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-green-900/50 flex items-center gap-2">
-                <i class="fas fa-tint"></i> Rinse with Water
+            <button onclick="simulateCFStep1Right()" id="btn-cf-water" class="bg-green-600 hover:bg-green-500 text-white px-5 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-green-900/50 flex items-center gap-2 text-sm">
+                <i class="fas fa-tint"></i> Step 1: Rinse with Water
+            </button>
+            <button onclick="simulateCFStep2()" id="btn-cf-titrate" class="bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-blue-900/50 flex items-center gap-2 text-sm opacity-50 cursor-not-allowed" disabled>
+                <i class="fas fa-play"></i> Step 2: Titrate
             </button>
             <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center gap-2">
                 <i class="fas fa-undo"></i> Reset
@@ -792,7 +795,9 @@
             indVolAdded: 0,
             indIsAnimating: false,
             // Conical flask tab
-            cfStage: 0, // 0: initial, 1: animating, 2: complete
+            cfStage: 0, // 0: initial, 1: rinsing, 2: ready for titration, 3: titrating, 4: complete
+            cfLeftRinsed: false,
+            cfRightRinsed: false,
             cfIsAnimatingWrong: false,
             cfIsAnimatingRight: false,
             cfWrongExtraMoles: 0,
@@ -801,7 +806,11 @@
             cfLeftLevel: 0,
             cfRightLevel: 0,
             cfLeftDrip: 0,
-            cfRightDrip: 0
+            cfRightDrip: 0,
+            cfLeftPink: 0, // 0-1 pink intensity
+            cfRightPink: 0,
+            cfLeftRinseAnim: 0,
+            cfRightRinseAnim: 0
         };
 
         let particles = [];
@@ -2565,49 +2574,119 @@
 
         function drawConicalTab() {
             const time = Date.now() / 1000;
-            const midX = width / 2;
-            const groundY = height * 0.85;
+            const groundY = height * 0.92;
 
-            // Two sides
+            // Two sides - positions
             const leftX = width * 0.25;
             const rightX = width * 0.75;
 
-            // Draw conical flask helper
-            function drawConicalFlask(cx, botY, liquidFrac, liquidColor, label, extraMolesText) {
-                const mouthW = 20;
-                const neckH = 50;
-                const bodyH = 130;
-                const baseW = 100;
-                const topY = botY - neckH - bodyH;
+            // Draw conical flask with burette directly above
+            function drawSetup(cx, botY, stage, rinsed, rinseAnim, liquidLevel, drip, pink, extraMoles, isWrong) {
+                const mouthW = 18;
+                const neckH = 40;
+                const bodyH = 110;
+                const baseW = 90;
+                const flaskTop = botY - neckH - bodyH;
+
+                // Burette positioned just above the flask mouth
+                const burW = 20, burH = 140;
+                const burTop = flaskTop - 60;
+                const burBot = burTop + burH;
+
+                // ===== BURETTE =====
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(cx - burW/2, burTop, burW, burH);
+                // NaOH liquid in burette
+                const liqInBur = burH * (1 - liquidLevel);
+                ctx.fillStyle = 'rgba(59,130,246,0.35)';
+                ctx.fillRect(cx - burW/2 + 1, burTop + 1, burW - 2, liqInBur);
+                // Tap
+                ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                ctx.fillRect(cx - 12, burBot, 24, 5);
+                // Tip going into flask
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, burBot + 5);
+                ctx.lineTo(cx, flaskTop + 15);
+                ctx.stroke();
+
+                // Drip animation
+                if (drip > 0) {
+                    const dripY = burBot + 5 + (drip % 1) * (flaskTop + 15 - burBot - 5);
+                    ctx.fillStyle = 'rgba(59,130,246,0.7)';
+                    ctx.beginPath();
+                    ctx.ellipse(cx, dripY, 3, 5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // Burette label
+                ctx.textAlign = 'center';
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.font = '10px sans-serif';
+                ctx.fillText('NaOH (0.1M)', cx, burTop - 5);
+
+                // ===== CONICAL FLASK =====
+                // Liquid color based on state
+                let liquidColor;
+                if (pink > 0) {
+                    // Phenolphthalein turning pink at endpoint
+                    const pinkVal = Math.min(pink, 1);
+                    liquidColor = `rgba(${220 + 35*pinkVal}, ${80 - 30*pinkVal}, ${140 + 60*pinkVal}, ${0.3 + 0.25*pinkVal})`;
+                } else if (extraMoles > 0) {
+                    // Extra acid from wrong rinsing - orange tint
+                    liquidColor = `rgba(251, 146, 60, ${0.25 + extraMoles * 40})`;
+                } else {
+                    // Normal HCl - light blue tint
+                    liquidColor = 'rgba(147, 197, 253, 0.2)';
+                }
 
                 // Clip for liquid
                 ctx.save();
                 ctx.beginPath();
-                ctx.moveTo(cx - mouthW, topY);
-                ctx.lineTo(cx - mouthW, topY + neckH);
+                ctx.moveTo(cx - mouthW, flaskTop);
+                ctx.lineTo(cx - mouthW, flaskTop + neckH);
                 ctx.lineTo(cx - baseW/2, botY);
                 ctx.lineTo(cx + baseW/2, botY);
-                ctx.lineTo(cx + mouthW, topY + neckH);
-                ctx.lineTo(cx + mouthW, topY);
+                ctx.lineTo(cx + mouthW, flaskTop + neckH);
+                ctx.lineTo(cx + mouthW, flaskTop);
                 ctx.closePath();
                 ctx.clip();
 
-                const liqH = (bodyH + neckH) * liquidFrac;
+                // Liquid fill
+                const baseLiqFrac = 0.35;
+                const addedLiq = liquidLevel * 0.25;
+                const liqH = (bodyH + neckH) * (baseLiqFrac + addedLiq);
                 ctx.fillStyle = liquidColor;
                 ctx.fillRect(cx - baseW/2, botY - liqH, baseW, liqH);
+
+                // Rinse animation - water/solution pouring in
+                if (rinseAnim > 0 && rinseAnim < 1) {
+                    const pourY = flaskTop + neckH * rinseAnim;
+                    ctx.fillStyle = isWrong ? 'rgba(251, 146, 60, 0.5)' : 'rgba(147, 197, 253, 0.4)';
+                    for (let i = 0; i < 5; i++) {
+                        const px = cx + (Math.random() - 0.5) * 20;
+                        const py = pourY + Math.random() * 30;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 2 + Math.random() * 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
                 ctx.restore();
 
                 // Glass outline
                 ctx.strokeStyle = 'rgba(255,255,255,0.6)';
                 ctx.lineWidth = 2.5;
                 ctx.beginPath();
-                ctx.moveTo(cx - mouthW, topY);
-                ctx.lineTo(cx - mouthW, topY + neckH);
+                ctx.moveTo(cx - mouthW, flaskTop);
+                ctx.lineTo(cx - mouthW, flaskTop + neckH);
                 ctx.lineTo(cx - baseW/2, botY);
                 ctx.stroke();
                 ctx.beginPath();
-                ctx.moveTo(cx + mouthW, topY);
-                ctx.lineTo(cx + mouthW, topY + neckH);
+                ctx.moveTo(cx + mouthW, flaskTop);
+                ctx.lineTo(cx + mouthW, flaskTop + neckH);
                 ctx.lineTo(cx + baseW/2, botY);
                 ctx.stroke();
                 ctx.beginPath();
@@ -2615,133 +2694,129 @@
                 ctx.lineTo(cx + baseW/2, botY);
                 ctx.stroke();
 
-                // Label below
-                ctx.textAlign = 'center';
-                ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                ctx.font = '12px sans-serif';
-                ctx.fillText(label, cx, botY + 18);
-                if (extraMolesText) {
-                    ctx.fillStyle = extraMolesText.color;
+                // Extra moles particles
+                if (extraMoles > 0 && !state.cfIsAnimatingWrong) {
+                    ctx.fillStyle = 'rgba(251, 146, 60, 0.7)';
+                    for (let i = 0; i < 6; i++) {
+                        const px = cx - 25 + Math.sin(time * 2 + i * 1.2) * 20;
+                        const py = botY - 35 - Math.cos(time * 1.5 + i * 0.8) * 20;
+                        ctx.beginPath();
+                        ctx.arc(px, py, 2.5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                // Pink endpoint indicator
+                if (pink >= 1) {
+                    ctx.fillStyle = '#ec4899';
                     ctx.font = 'bold 12px sans-serif';
-                    ctx.fillText(extraMolesText.text, cx, botY + 35);
+                    ctx.textAlign = 'center';
+                    ctx.fillText('🌸 Pink!', cx, botY - bodyH/2);
+                } else if (pink > 0.3) {
+                    const pulse = 0.5 + Math.sin(time * 4) * 0.5;
+                    ctx.fillStyle = `rgba(236, 72, 153, ${pulse})`;
+                    ctx.font = 'bold 11px sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Turning pink...', cx, botY - bodyH/2);
                 }
+
                 ctx.textAlign = 'start';
             }
 
-            // Draw burettes above each flask
-            function drawBurette(cx, topY, level, drip) {
-                const bW = 24, bH = 180;
-                const bTop = topY;
-                const bBot = bTop + bH;
-                // Burette tube
-                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(cx - bW/2, bTop, bW, bH);
-                // NaOH liquid
-                const liqH = bH * (1 - level);
-                ctx.fillStyle = 'rgba(59,130,246,0.3)';
-                ctx.fillRect(cx - bW/2 + 1, bTop + 1, bW - 2, liqH);
-                // Tap
-                ctx.fillStyle = 'rgba(255,255,255,0.4)';
-                ctx.fillRect(cx - 15, bBot, 30, 6);
-                // Tip
-                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(cx, bBot + 6);
-                ctx.lineTo(cx, bBot + 25);
-                ctx.stroke();
-                // Drip
-                if (drip > 0) {
-                    const dripY = bBot + 25 + (drip % 1) * 60;
-                    ctx.fillStyle = 'rgba(59,130,246,0.6)';
-                    ctx.beginPath();
-                    ctx.ellipse(cx, dripY, 3, 5, 0, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                // Label
-                ctx.textAlign = 'center';
-                ctx.fillStyle = 'rgba(255,255,255,0.5)';
-                ctx.font = '11px sans-serif';
-                ctx.fillText('NaOH (0.1M)', cx, bTop - 5);
-                ctx.textAlign = 'start';
-            }
+            // ===== DRAW BOTH SETUPS =====
+            drawSetup(leftX, groundY, state.cfStage, state.cfLeftRinsed, state.cfLeftRinseAnim, 
+                      state.cfLeftLevel, state.cfLeftDrip, state.cfLeftPink, state.cfWrongExtraMoles, true);
+            drawSetup(rightX, groundY, state.cfStage, state.cfRightRinsed, state.cfRightRinseAnim,
+                      state.cfRightLevel, state.cfRightDrip, state.cfRightPink, 0, false);
 
-            // ===== LEFT: Rinsed with analyte (wrong) =====
-            const leftBotY = groundY;
-            const wrongLiqFrac = 0.35 + state.cfLeftLevel * 0.15;
-            // Extra moles make the colour more intense
-            const wrongAlpha = 0.25 + state.cfWrongExtraMoles * 50;
-            drawConicalFlask(leftX, leftBotY, wrongLiqFrac,
-                `rgba(251, 146, 60, ${Math.min(wrongAlpha, 0.6)})`,
-                '25.0 cm³ HCl (pipetted)',
-                state.cfWrongExtraMoles > 0 ? { text: `+${(state.cfWrongExtraMoles*1000).toFixed(2)} × 10⁻³ mol extra!`, color: '#f87171' } : null
-            );
+            // ===== LABELS =====
+            ctx.textAlign = 'center';
+            ctx.font = '11px sans-serif';
+            ctx.fillStyle = 'rgba(255,255,255,0.5)';
+            ctx.fillText('25.0 cm³ HCl + indicator', leftX, groundY + 15);
+            ctx.fillText('25.0 cm³ HCl + indicator', rightX, groundY + 15);
 
-            // Particles for wrong side (extra acid dots)
-            if (state.cfWrongExtraMoles > 0) {
-                ctx.fillStyle = 'rgba(251, 146, 60, 0.7)';
-                for (let i = 0; i < 8; i++) {
-                    const px = leftX - 35 + Math.sin(time * 2 + i * 1.3) * 30;
-                    const py = leftBotY - 30 - Math.cos(time * 1.5 + i * 0.9) * 25;
-                    ctx.beginPath();
-                    ctx.arc(px, py, 3, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-                // "Extra moles" label
-                ctx.fillStyle = '#fb923c';
-                ctx.font = 'bold 13px sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText('Extra acid moles!', leftX, leftBotY - groundY * 0.02 - 50);
-                ctx.textAlign = 'start';
-            }
-
-            // ===== RIGHT: Rinsed with water (correct) =====
-            const rightLiqFrac = 0.35 + state.cfRightLevel * 0.15;
-            drawConicalFlask(rightX, leftBotY, rightLiqFrac,
-                'rgba(147, 197, 253, 0.2)',
-                '25.0 cm³ HCl (pipetted)',
-                state.cfRightLevel > 0 ? { text: 'Same moles, just diluted', color: '#4ade80' } : null
-            );
-
-            // Burettes
-            const burTop = 20;
-            drawBurette(leftX, burTop, state.cfLeftLevel, state.cfLeftDrip);
-            drawBurette(rightX, burTop, state.cfRightLevel, state.cfRightDrip);
-
-            // Titre labels
-            if (state.cfIsAnimatingWrong || state.cfWrongTitre !== 25.0) {
-                ctx.textAlign = 'center';
-                ctx.font = 'bold 14px sans-serif';
+            // Status labels
+            if (state.cfLeftRinsed) {
                 ctx.fillStyle = '#f87171';
-                ctx.fillText(`Titre: ${state.cfWrongTitre.toFixed(1)} cm³`, leftX, burTop + 200 + 65);
-                ctx.textAlign = 'start';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText('Rinsed with analyte', leftX, groundY + 30);
+                if (state.cfWrongExtraMoles > 0) {
+                    ctx.fillText(`+${(state.cfWrongExtraMoles*1000).toFixed(2)} mmol extra!`, leftX, groundY + 44);
+                }
             }
-            if (state.cfIsAnimatingRight || state.cfRightTitre !== 25.0) {
-                ctx.textAlign = 'center';
-                ctx.font = 'bold 14px sans-serif';
+            if (state.cfRightRinsed) {
                 ctx.fillStyle = '#4ade80';
-                ctx.fillText(`Titre: ${state.cfRightTitre.toFixed(1)} cm³`, rightX, burTop + 200 + 65);
-                ctx.textAlign = 'start';
+                ctx.font = 'bold 11px sans-serif';
+                ctx.fillText('Rinsed with water', rightX, groundY + 30);
+                ctx.fillText('(no extra moles)', rightX, groundY + 44);
             }
+
+            // Titre results
+            if (state.cfLeftPink >= 1) {
+                ctx.fillStyle = '#f87171';
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillText(`Titre: ${state.cfWrongTitre.toFixed(1)} cm³`, leftX, groundY - 170);
+                ctx.font = '11px sans-serif';
+                ctx.fillText('(too high!)', leftX, groundY - 155);
+            }
+            if (state.cfRightPink >= 1) {
+                ctx.fillStyle = '#4ade80';
+                ctx.font = 'bold 13px sans-serif';
+                ctx.fillText(`Titre: ${state.cfRightTitre.toFixed(1)} cm³ ✓`, rightX, groundY - 170);
+            }
+
+            ctx.textAlign = 'start';
 
             // ===== ANIMATIONS =====
+            // Step 1: Rinsing animation
+            if (state.cfLeftRinseAnim > 0 && state.cfLeftRinseAnim < 1) {
+                state.cfLeftRinseAnim += 0.02;
+                if (state.cfLeftRinseAnim >= 1) {
+                    state.cfLeftRinseAnim = 1;
+                    state.cfLeftRinsed = true;
+                    state.cfWrongExtraMoles = 0.75e-3;
+                    document.getElementById('cf-extra-moles').innerHTML = '<span class="text-red-400">+0.75 × 10⁻³ mol</span>';
+                    checkEnableTitrate();
+                }
+            }
+            if (state.cfRightRinseAnim > 0 && state.cfRightRinseAnim < 1) {
+                state.cfRightRinseAnim += 0.02;
+                if (state.cfRightRinseAnim >= 1) {
+                    state.cfRightRinseAnim = 1;
+                    state.cfRightRinsed = true;
+                    document.getElementById('cf-water').innerHTML = '<span class="text-green-400">No extra moles added</span>';
+                    checkEnableTitrate();
+                }
+            }
+
+            // Step 2: Titration animation
             if (state.cfIsAnimatingWrong) {
-                state.cfLeftDrip += 0.03;
-                state.cfLeftLevel += 0.003;
-                if (state.cfLeftLevel >= 0.6) {
-                    state.cfLeftLevel = 0.6;
+                state.cfLeftDrip += 0.04;
+                state.cfLeftLevel += 0.004;
+                // Needs more titre due to extra moles - endpoint at higher level
+                if (state.cfLeftLevel >= 0.56) {
+                    state.cfLeftPink = Math.min(state.cfLeftPink + 0.05, 1);
+                }
+                if (state.cfLeftLevel >= 0.65) {
+                    state.cfLeftLevel = 0.65;
+                    state.cfLeftPink = 1;
                     state.cfIsAnimatingWrong = false;
-                    state.cfWrongTitre = 28.0; // needs more due to extra moles
+                    state.cfWrongTitre = 28.0;
                     document.getElementById('cf-wrong-titre').innerHTML = '<span class="text-red-400">28.0 cm³ (too high!)</span>';
                     document.getElementById('cf-wrong-moles').innerHTML = '<span class="text-red-400">3.25 × 10⁻³ mol</span>';
                 }
             }
             if (state.cfIsAnimatingRight) {
-                state.cfRightDrip += 0.03;
-                state.cfRightLevel += 0.003;
+                state.cfRightDrip += 0.04;
+                state.cfRightLevel += 0.004;
+                // Correct endpoint
+                if (state.cfRightLevel >= 0.45) {
+                    state.cfRightPink = Math.min(state.cfRightPink + 0.05, 1);
+                }
                 if (state.cfRightLevel >= 0.5) {
                     state.cfRightLevel = 0.5;
+                    state.cfRightPink = 1;
                     state.cfIsAnimatingRight = false;
                     state.cfRightTitre = 25.0;
                     document.getElementById('cf-right-titre').innerHTML = '<span class="text-green-400">25.0 cm³ ✓</span>';
@@ -2749,21 +2824,34 @@
             }
         }
 
-        function simulateCFRinse() {
-            if (state.cfIsAnimatingWrong) return;
-            state.cfIsAnimatingWrong = true;
-            state.cfWrongExtraMoles = 0.75e-3; // extra 0.75 mmol from rinsing
-            document.getElementById('cf-extra-moles').innerHTML = '<span class="text-red-400">+0.75 × 10⁻³ mol</span>';
+        function checkEnableTitrate() {
+            if (state.cfLeftRinsed && state.cfRightRinsed) {
+                document.getElementById('btn-cf-titrate').disabled = false;
+                document.getElementById('btn-cf-titrate').classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function simulateCFStep1Wrong() {
+            if (state.cfLeftRinsed) return;
+            state.cfLeftRinseAnim = 0.01;
             document.getElementById('btn-cf-rinse').disabled = true;
             document.getElementById('btn-cf-rinse').classList.add('opacity-50', 'cursor-not-allowed');
         }
 
-        function simulateCFWater() {
-            if (state.cfIsAnimatingRight) return;
-            state.cfIsAnimatingRight = true;
-            document.getElementById('cf-water').innerHTML = '<span class="text-green-400">Dilutes only — no extra moles</span>';
+        function simulateCFStep1Right() {
+            if (state.cfRightRinsed) return;
+            state.cfRightRinseAnim = 0.01;
             document.getElementById('btn-cf-water').disabled = true;
             document.getElementById('btn-cf-water').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function simulateCFStep2() {
+            if (!state.cfLeftRinsed || !state.cfRightRinsed) return;
+            if (state.cfIsAnimatingWrong || state.cfIsAnimatingRight) return;
+            state.cfIsAnimatingWrong = true;
+            state.cfIsAnimatingRight = true;
+            document.getElementById('btn-cf-titrate').disabled = true;
+            document.getElementById('btn-cf-titrate').classList.add('opacity-50', 'cursor-not-allowed');
         }
 
         function gameLoop() {
@@ -2976,6 +3064,8 @@
 
             // Conical flask tab state
             state.cfStage = 0;
+            state.cfLeftRinsed = false;
+            state.cfRightRinsed = false;
             state.cfIsAnimatingWrong = false;
             state.cfIsAnimatingRight = false;
             state.cfWrongExtraMoles = 0;
@@ -2985,6 +3075,10 @@
             state.cfRightLevel = 0;
             state.cfLeftDrip = 0;
             state.cfRightDrip = 0;
+            state.cfLeftPink = 0;
+            state.cfRightPink = 0;
+            state.cfLeftRinseAnim = 0;
+            state.cfRightRinseAnim = 0;
 
             // Reset UI - Molarity tab
             document.getElementById('wrong-moles').innerText = `0.00 mol`;
@@ -3066,6 +3160,8 @@
             document.getElementById('btn-cf-rinse').classList.remove('opacity-50', 'cursor-not-allowed');
             document.getElementById('btn-cf-water').disabled = false;
             document.getElementById('btn-cf-water').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-cf-titrate').disabled = true;
+            document.getElementById('btn-cf-titrate').classList.add('opacity-50', 'cursor-not-allowed');
             
             updateUI();
             updateUIWashings();
