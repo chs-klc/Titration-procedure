@@ -62,6 +62,9 @@
             <button onclick="switchTab('pipette')" id="tab-pipette" class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive">
                 <i class="fas fa-tint mr-1"></i> Pipette Rinsing
             </button>
+            <button onclick="switchTab('burette')" id="tab-burette" class="flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive">
+                <i class="fas fa-fill-drip mr-1"></i> Burette Rinsing
+            </button>
         </div>
 
         <!-- Tab 1: Molarity Misconception -->
@@ -263,6 +266,71 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tab 4: Burette Rinsing -->
+        <div id="content-burette" class="flex-1 flex flex-col gap-4 hidden">
+            <!-- Concept Explanation -->
+            <div class="glass-panel p-5 rounded-xl shadow-lg">
+                <h3 class="text-xl font-bold text-red-400 mb-3"><i class="fas fa-times-circle mr-2"></i>The Misconception</h3>
+                <p class="text-slate-300 text-sm mb-2 leading-relaxed">
+                    Students may forget to rinse the burette with the solution (e.g. solution A) before filling it, leaving residual distilled water inside.
+                </p>
+                
+                <div class="mt-4 border-t border-slate-700 pt-4">
+                    <h3 class="text-xl font-bold text-green-400 mb-3"><i class="fas fa-check-circle mr-2"></i>Why Rinsing Matters</h3>
+                    <p class="text-slate-300 text-sm mb-3 leading-relaxed">
+                        Residual water in the burette <strong>dilutes</strong> the titrant (solution A). This means <strong>more volume</strong> of solution A is needed to reach the end point, giving an <strong>inaccurate titre value</strong>.
+                    </p>
+                    <div class="bg-slate-800 p-3 rounded-lg text-center mb-3 border border-slate-700">
+                        $$\text{Diluted titrant} \Rightarrow \text{Larger titre} \Rightarrow \text{Wrong molarity of B}$$
+                    </div>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        <strong>Correct Method:</strong> After washing with distilled water, rinse the burette 2–3 times with <strong>solution A</strong> before filling. This ensures the concentration of the titrant is accurate.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Dynamic Output -->
+            <div class="flex-grow flex flex-col gap-4">
+                <!-- Without Rinsing -->
+                <div class="bg-red-950/30 border border-red-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+                    <h4 class="font-bold text-red-300 mb-2">Without Rinsing (Wrong)</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Original conc.:</span>
+                        <span class="text-right font-mono text-slate-200">1.00 M</span>
+                        
+                        <span class="text-slate-400">Water residue:</span>
+                        <span class="text-right font-mono text-orange-300" id="bur-water">0.0 cm³</span>
+                        
+                        <span class="text-slate-400">Effective conc.:</span>
+                        <span class="text-right font-mono text-red-300 font-bold" id="bur-wrong-conc">1.00 M</span>
+                        
+                        <span class="text-slate-400 font-bold mt-2">Titre reading:</span>
+                        <span class="text-right font-mono text-red-400 font-bold mt-2 text-lg" id="bur-wrong-titre">— cm³</span>
+                    </div>
+                </div>
+
+                <!-- With Rinsing -->
+                <div class="bg-green-950/30 border border-green-900/50 p-4 rounded-xl relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-green-500"></div>
+                    <h4 class="font-bold text-green-300 mb-2">With Rinsing (Correct)</h4>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <span class="text-slate-400">Original conc.:</span>
+                        <span class="text-right font-mono text-slate-200">1.00 M</span>
+                        
+                        <span class="text-slate-400">Water residue:</span>
+                        <span class="text-right font-mono text-green-300">0.0 cm³</span>
+                        
+                        <span class="text-slate-400">Effective conc.:</span>
+                        <span class="text-right font-mono text-green-300 font-bold" id="bur-right-conc">1.00 M</span>
+                        
+                        <span class="text-slate-400 font-bold mt-2">Titre reading:</span>
+                        <span class="text-right font-mono text-green-400 font-bold mt-2 text-lg" id="bur-right-titre">— cm³</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Right Area: 2D Canvas & Controls -->
@@ -301,6 +369,17 @@
                 </div>
                 
                 <div class="absolute top-1/4 left-3/4 transform -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none z-10 drop-shadow-md">
+                    <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">With Rinsing</span>
+                </div>
+            </div>
+
+            <!-- Overlays for Tab 4 -->
+            <div id="overlay-burette" class="hidden">
+                <div class="absolute top-[8%] left-1/4 transform -translate-x-1/2 text-center pointer-events-none z-10 drop-shadow-md">
+                    <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">Without Rinsing</span>
+                </div>
+                
+                <div class="absolute top-[8%] left-3/4 transform -translate-x-1/2 text-center pointer-events-none z-10 drop-shadow-md">
                     <span class="bg-slate-900/80 px-3 py-1.5 rounded-md text-sm font-semibold text-slate-300 border border-slate-600 shadow-lg">With Rinsing</span>
                 </div>
             </div>
@@ -344,6 +423,19 @@
                 <i class="fas fa-undo"></i> Reset
             </button>
         </div>
+
+        <!-- Controls Panel (Bottom) - Tab 4 -->
+        <div id="controls-burette" class="h-24 bg-slate-900 border-t border-slate-700 p-4 flex justify-center items-center gap-4 z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.5)] hidden">
+            <button onclick="simulateNoBurRinse()" id="btn-no-bur-rinse" class="bg-red-600 hover:bg-red-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-red-900/50 flex items-center gap-2">
+                <i class="fas fa-times"></i> Skip Rinsing
+            </button>
+            <button onclick="simulateWithBurRinse()" id="btn-with-bur-rinse" class="bg-green-600 hover:bg-green-500 text-white px-6 py-3 rounded-lg font-bold transition-colors shadow-lg shadow-green-900/50 flex items-center gap-2">
+                <i class="fas fa-fill-drip"></i> Rinse Burette
+            </button>
+            <button onclick="resetSimulation()" class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold transition-colors flex items-center gap-2">
+                <i class="fas fa-undo"></i> Reset
+            </button>
+        </div>
     </div>
 
     <!-- HTML5 Canvas 2D Simulation Script -->
@@ -363,21 +455,27 @@
             document.getElementById('tab-pipette').className = tab === 'pipette' 
                 ? 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-active'
                 : 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive';
+            document.getElementById('tab-burette').className = tab === 'burette' 
+                ? 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-active'
+                : 'flex-1 px-4 py-2 rounded-lg font-semibold text-sm transition-all tab-inactive';
             
             // Update content
             document.getElementById('content-molarity').classList.toggle('hidden', tab !== 'molarity');
             document.getElementById('content-washings').classList.toggle('hidden', tab !== 'washings');
             document.getElementById('content-pipette').classList.toggle('hidden', tab !== 'pipette');
+            document.getElementById('content-burette').classList.toggle('hidden', tab !== 'burette');
             
             // Update overlays
             document.getElementById('overlay-molarity').classList.toggle('hidden', tab !== 'molarity');
             document.getElementById('overlay-washings').classList.toggle('hidden', tab !== 'washings');
             document.getElementById('overlay-pipette').classList.toggle('hidden', tab !== 'pipette');
+            document.getElementById('overlay-burette').classList.toggle('hidden', tab !== 'burette');
             
             // Update controls
             document.getElementById('controls-molarity').classList.toggle('hidden', tab !== 'molarity');
             document.getElementById('controls-washings').classList.toggle('hidden', tab !== 'washings');
             document.getElementById('controls-pipette').classList.toggle('hidden', tab !== 'pipette');
+            document.getElementById('controls-burette').classList.toggle('hidden', tab !== 'burette');
             
             resetSimulation();
         }
@@ -411,12 +509,26 @@
             isAnimatingWithRinse: false,
             pipStage: 0, // 0: initial, 1: delivering, 2: complete
             pipNoRinseFill: 0,
-            pipRinseFill: 0
+            pipRinseFill: 0,
+            // Burette tab
+            burWaterResidue: 0,
+            burWrongConc: 1.0,
+            burRightConc: 1.0,
+            burWrongTitre: 25.0,
+            burRightTitre: 25.0,
+            isAnimatingNoBurRinse: false,
+            isAnimatingWithBurRinse: false,
+            burStage: 0, // 0: initial, 1: titrating, 2: complete
+            burLeftLevel: 0.0,
+            burRightLevel: 0.0,
+            burLeftDrip: 0,
+            burRightDrip: 0
         };
 
         let particles = [];
         let washingParticles = [];
         let pipetteParticles = [];
+        let buretteParticles = [];
 
         function resizeCanvas() {
             const container = document.getElementById('canvas-container');
@@ -471,8 +583,10 @@
                 drawMolarityTab();
             } else if (currentTab === 'washings') {
                 drawWashingsTab();
-            } else {
+            } else if (currentTab === 'pipette') {
                 drawPipetteTab();
+            } else {
+                drawBuretteTab();
             }
         }
 
@@ -1265,6 +1379,292 @@
             }
         }
 
+        function drawBuretteTab() {
+            const groundY = height * 0.9;
+            const leftX = width * 0.25;
+            const rightX = width * 0.75;
+            const time = Date.now() / 1000;
+
+            // ============ HELPER: Draw a burette ============
+            function drawBurette(cx, topY, liquidColor, waterResidue, drainLevel, isWrong) {
+                const tubeW = 10;
+                const tubeH = 280;
+                const stopY = topY + tubeH;
+                const tipW = 4;
+                const tipH = 25;
+
+                // Liquid inside burette
+                const liquidTopY = topY + drainLevel * tubeH;
+                const liquidH = tubeH - drainLevel * tubeH;
+
+                if (liquidH > 0) {
+                    ctx.fillStyle = liquidColor;
+                    ctx.fillRect(cx - tubeW/2 + 1, liquidTopY, tubeW - 2, liquidH);
+                }
+
+                // Water residue film
+                if (waterResidue) {
+                    ctx.strokeStyle = 'rgba(100, 170, 255, 0.35)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - tubeW/2 + 1, topY);
+                    ctx.lineTo(cx - tubeW/2 + 1, stopY);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx + tubeW/2 - 1, topY);
+                    ctx.lineTo(cx + tubeW/2 - 1, stopY);
+                    ctx.stroke();
+
+                    // Water droplets
+                    for (let i = 0; i < 5; i++) {
+                        const dy = topY + 20 + i * 25;
+                        const wobble = Math.sin(time * 2.5 + i * 1.2) * 1;
+                        ctx.fillStyle = 'rgba(100, 170, 255, 0.6)';
+                        ctx.beginPath();
+                        ctx.ellipse(cx + wobble, dy, 2.5, 3.5, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                // Burette glass tube
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.moveTo(cx - tubeW/2, topY);
+                ctx.lineTo(cx - tubeW/2, stopY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx + tubeW/2, topY);
+                ctx.lineTo(cx + tubeW/2, stopY);
+                ctx.stroke();
+
+                // Top rim
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx - tubeW/2 - 3, topY);
+                ctx.lineTo(cx + tubeW/2 + 3, topY);
+                ctx.stroke();
+
+                // Graduation marks
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 1;
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.font = '9px sans-serif';
+                for (let i = 0; i <= 50; i += 10) {
+                    const markY = topY + (i / 50) * tubeH;
+                    ctx.beginPath();
+                    ctx.moveTo(cx - tubeW/2 - 4, markY);
+                    ctx.lineTo(cx - tubeW/2 + 2, markY);
+                    ctx.stroke();
+                    ctx.fillText(i.toString(), cx - tubeW/2 - 18, markY + 3);
+                }
+
+                // Stopcock
+                ctx.fillStyle = 'rgba(120, 80, 40, 0.9)';
+                ctx.fillRect(cx - 12, stopY - 2, 24, 6);
+                // Stopcock handle
+                ctx.fillStyle = 'rgba(100, 60, 30, 0.8)';
+                ctx.fillRect(cx + 12, stopY - 4, 10, 10);
+
+                // Tip below stopcock
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx - tipW/2, stopY + 4);
+                ctx.lineTo(cx - tipW/2, stopY + tipH);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx + tipW/2, stopY + 4);
+                ctx.lineTo(cx + tipW/2, stopY + tipH);
+                ctx.stroke();
+
+                return { tipX: cx, tipY: stopY + tipH };
+            }
+
+            // ============ HELPER: Draw conical flask ============
+            function drawFlask(cx, bottomY, liquidLevel, liquidColor) {
+                const mouthW = 16;
+                const neckH = 40;
+                const bodyH = 100;
+                const baseW = 80;
+                const topY = bottomY - neckH - bodyH;
+
+                if (liquidLevel > 0) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.moveTo(cx - mouthW, topY);
+                    ctx.lineTo(cx - mouthW, topY + neckH);
+                    ctx.lineTo(cx - baseW/2, bottomY);
+                    ctx.lineTo(cx + baseW/2, bottomY);
+                    ctx.lineTo(cx + mouthW, topY + neckH);
+                    ctx.lineTo(cx + mouthW, topY);
+                    ctx.closePath();
+                    ctx.clip();
+
+                    const liqH = (bodyH + neckH) * liquidLevel;
+                    ctx.fillStyle = liquidColor;
+                    ctx.fillRect(cx - baseW/2 - 5, bottomY - liqH, baseW + 10, liqH);
+                    ctx.restore();
+                }
+
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(cx - mouthW, topY);
+                ctx.lineTo(cx - mouthW, topY + neckH);
+                ctx.lineTo(cx - baseW/2, bottomY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx + mouthW, topY);
+                ctx.lineTo(cx + mouthW, topY + neckH);
+                ctx.lineTo(cx + baseW/2, bottomY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(cx - baseW/2, bottomY);
+                ctx.lineTo(cx + baseW/2, bottomY);
+                ctx.stroke();
+            }
+
+            // ============ LEFT SIDE: Without Rinsing ============
+            const burTopY = height * 0.08;
+            const flaskBotY = groundY;
+
+            const leftTip = drawBurette(leftX, burTopY, 'rgba(239, 120, 100, 0.45)', state.burWaterResidue > 0, state.burLeftLevel, true);
+            drawFlask(leftX, flaskBotY, state.burLeftDrip * 0.8, 'rgba(239, 100, 100, 0.3)');
+
+            // Warning label
+            if (state.burWaterResidue > 0 && state.burStage < 2) {
+                ctx.save();
+                const pulse = 0.7 + Math.sin(time * 3) * 0.3;
+                ctx.globalAlpha = pulse;
+                ctx.fillStyle = '#fbbf24';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('⚠ Water residue', leftX, burTopY - 12);
+                ctx.fillText('dilutes titrant!', leftX, burTopY + 1);
+                ctx.restore();
+                ctx.textAlign = 'start';
+            }
+
+            // Result label
+            if (state.burStage === 2 && !state.isAnimatingNoBurRinse) {
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('✗ Inaccurate titre!', leftX, flaskBotY + 20);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Titre = ${state.burWrongTitre.toFixed(1)} cm³ (too large)`, leftX, flaskBotY + 37);
+                ctx.textAlign = 'start';
+            }
+
+            // ============ RIGHT SIDE: With Rinsing ============
+            const rightTip = drawBurette(rightX, burTopY, 'rgba(59, 180, 130, 0.45)', false, state.burRightLevel, false);
+            drawFlask(rightX, flaskBotY, state.burRightDrip * 0.8, 'rgba(34, 197, 94, 0.3)');
+
+            // Rinsed label
+            if (state.burStage >= 1 && (state.isAnimatingWithBurRinse || state.burStage === 2)) {
+                ctx.fillStyle = '#22c55e';
+                ctx.font = 'bold 12px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('✓ Rinsed with solution A', rightX, burTopY - 5);
+                ctx.textAlign = 'start';
+            }
+
+            // Result label
+            if (state.burStage === 2 && !state.isAnimatingWithBurRinse) {
+                ctx.fillStyle = '#22c55e';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('✓ Accurate titre!', rightX, flaskBotY + 20);
+                ctx.font = '12px sans-serif';
+                ctx.fillText(`Titre = ${state.burRightTitre.toFixed(1)} cm³`, rightX, flaskBotY + 37);
+                ctx.textAlign = 'start';
+            }
+
+            // ============ Drip particles ============
+            for (let p of buretteParticles) {
+                if (p.opacity > 0) {
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.opacity;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                }
+            }
+
+            // ============ Animation Logic ============
+            if (state.isAnimatingNoBurRinse && state.burStage === 1) {
+                state.burLeftLevel += 0.002;
+                state.burLeftDrip += 0.003;
+
+                if (Math.random() < 0.2) {
+                    buretteParticles.push({
+                        x: leftX + (Math.random() - 0.5) * 4,
+                        y: leftTip.tipY,
+                        vy: 3 + Math.random() * 2,
+                        r: 1.5 + Math.random() * 1.5,
+                        opacity: 0.8,
+                        color: 'rgba(239, 120, 100, 0.7)'
+                    });
+                }
+
+                if (state.burWrongConc > 0.90) {
+                    state.burWrongConc -= 0.0005;
+                }
+                // Diluted titrant needs more volume: titre = expected * (1/conc)
+                state.burWrongTitre = 25.0 / state.burWrongConc;
+                updateUIBurette();
+
+                if (state.burLeftLevel >= 0.55) {
+                    state.burLeftLevel = 0.55;
+                    state.burLeftDrip = 0.55;
+                    state.burWrongConc = 0.90;
+                    state.burWrongTitre = 25.0 / 0.90;
+                    state.burStage = 2;
+                    state.isAnimatingNoBurRinse = false;
+                    updateUIBurette();
+                }
+            }
+
+            if (state.isAnimatingWithBurRinse && state.burStage === 1) {
+                state.burRightLevel += 0.002;
+                state.burRightDrip += 0.003;
+
+                if (Math.random() < 0.2) {
+                    buretteParticles.push({
+                        x: rightX + (Math.random() - 0.5) * 4,
+                        y: rightTip.tipY,
+                        vy: 3 + Math.random() * 2,
+                        r: 1.5 + Math.random() * 1.5,
+                        opacity: 0.8,
+                        color: 'rgba(34, 197, 94, 0.7)'
+                    });
+                }
+
+                state.burRightTitre = 25.0;
+                updateUIBurette();
+
+                if (state.burRightLevel >= 0.5) {
+                    state.burRightLevel = 0.5;
+                    state.burRightDrip = 0.5;
+                    state.burRightConc = 1.0;
+                    state.burRightTitre = 25.0;
+                    state.burStage = 2;
+                    state.isAnimatingWithBurRinse = false;
+                    updateUIBurette();
+                }
+            }
+
+            // Update drip particles
+            for (let p of buretteParticles) {
+                p.y += p.vy;
+                if (p.y > flaskBotY - 50) p.opacity -= 0.05;
+            }
+            buretteParticles = buretteParticles.filter(p => p.opacity > 0);
+        }
+
         function gameLoop() {
             draw();
             animationId = requestAnimationFrame(gameLoop);
@@ -1342,6 +1742,38 @@
             document.getElementById('pip-right-conc').innerText = `${state.pipRightConc.toFixed(2)} M`;
         }
 
+        function simulateNoBurRinse() {
+            if(state.isAnimatingNoBurRinse || state.burStage > 0) return;
+            state.isAnimatingNoBurRinse = true;
+            state.burStage = 1;
+            state.burWaterResidue = 2.5;
+            state.burWrongConc = 1.0;
+            state.burLeftLevel = 0;
+            state.burLeftDrip = 0;
+            document.getElementById('btn-no-bur-rinse').disabled = true;
+            document.getElementById('btn-no-bur-rinse').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function simulateWithBurRinse() {
+            if(state.isAnimatingWithBurRinse || state.burStage > 0) return;
+            state.isAnimatingWithBurRinse = true;
+            state.burStage = 1;
+            state.burWaterResidue = 0;
+            state.burRightConc = 1.0;
+            state.burRightLevel = 0;
+            state.burRightDrip = 0;
+            document.getElementById('btn-with-bur-rinse').disabled = true;
+            document.getElementById('btn-with-bur-rinse').classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        function updateUIBurette() {
+            document.getElementById('bur-water').innerText = `${state.burWaterResidue.toFixed(1)} cm³`;
+            document.getElementById('bur-wrong-conc').innerText = `${state.burWrongConc.toFixed(2)} M`;
+            document.getElementById('bur-wrong-titre').innerText = state.burStage > 0 ? `${state.burWrongTitre.toFixed(1)} cm³` : '— cm³';
+            document.getElementById('bur-right-conc').innerText = `${state.burRightConc.toFixed(2)} M`;
+            document.getElementById('bur-right-titre').innerText = state.burStage > 0 ? `${state.burRightTitre.toFixed(1)} cm³` : '— cm³';
+        }
+
         function updateUIWashings() {
             document.getElementById('wash-lost').innerText = `${state.washLostMoles.toFixed(2)} mol`;
             document.getElementById('wash-wrong-moles').innerText = `${state.washWrongMoles.toFixed(2)} mol`;
@@ -1416,6 +1848,21 @@
             state.pipRinseFill = 0;
             pipetteParticles = [];
 
+            // Burette tab state
+            state.burWaterResidue = 0;
+            state.burWrongConc = 1.0;
+            state.burRightConc = 1.0;
+            state.burWrongTitre = 25.0;
+            state.burRightTitre = 25.0;
+            state.isAnimatingNoBurRinse = false;
+            state.isAnimatingWithBurRinse = false;
+            state.burStage = 0;
+            state.burLeftLevel = 0;
+            state.burRightLevel = 0;
+            state.burLeftDrip = 0;
+            state.burRightDrip = 0;
+            buretteParticles = [];
+
             // Reset UI - Molarity tab
             document.getElementById('wrong-moles').innerText = `0.00 mol`;
             document.getElementById('wrong-vol').innerText = `1.00 dm³`;
@@ -1457,10 +1904,24 @@
             document.getElementById('btn-no-rinse').classList.remove('opacity-50', 'cursor-not-allowed');
             document.getElementById('btn-with-rinse').disabled = false;
             document.getElementById('btn-with-rinse').classList.remove('opacity-50', 'cursor-not-allowed');
+
+            // Reset UI - Burette tab
+            document.getElementById('bur-water').innerText = `0.0 cm³`;
+            document.getElementById('bur-wrong-conc').innerText = `1.00 M`;
+            document.getElementById('bur-wrong-titre').innerText = `— cm³`;
+            document.getElementById('bur-right-conc').innerText = `1.00 M`;
+            document.getElementById('bur-right-titre').innerText = `— cm³`;
+
+            // Reset Buttons - Burette tab
+            document.getElementById('btn-no-bur-rinse').disabled = false;
+            document.getElementById('btn-no-bur-rinse').classList.remove('opacity-50', 'cursor-not-allowed');
+            document.getElementById('btn-with-bur-rinse').disabled = false;
+            document.getElementById('btn-with-bur-rinse').classList.remove('opacity-50', 'cursor-not-allowed');
             
             updateUI();
             updateUIWashings();
             updateUIPipette();
+            updateUIBurette();
         }
     </script>
 </body>
