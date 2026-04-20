@@ -2182,42 +2182,53 @@
             const totalVol = (va + vol) / 1000;
             const Ka = 1.8e-5; // acetic acid
             const Kb = 1.8e-5; // ammonium hydroxide
+            const pKa = -Math.log10(Ka); // ~4.74
+            const pKb = -Math.log10(Kb); // ~4.74
 
             if (type === 'SA-SB') {
+                // Strong acid + Strong base: sharp vertical jump at equivalence
                 if (vol < 24.9) { return -Math.log10(Math.max((molesAcid - molesBase)/totalVol, 1e-14)); }
                 if (vol <= 25.1) return 7.0;
                 return 14 + Math.log10(Math.max((molesBase - molesAcid)/totalVol, 1e-14));
             }
             if (type === 'WA-SB') {
-                if (vol < 0.1) return 0.5*(-Math.log10(Ka) - Math.log10(ca));
+                // Weak acid + Strong base: buffer region, then sharp jump, equivalence ~8.7
+                if (vol < 0.1) return 0.5 * (pKa - Math.log10(ca)); // initial pH ~2.9
                 if (vol < 24.9) {
                     const remain = molesAcid - molesBase;
-                    if (remain <= 0) return 7;
-                    return -Math.log10(Ka) + Math.log10(molesBase / remain);
+                    if (remain <= 0) return 8.7;
+                    return pKa + Math.log10(molesBase / remain); // Henderson-Hasselbalch
                 }
-                if (vol <= 25.1) return 7 + 0.5*(14+Math.log10(Ka) - (-Math.log10(cb/2))); // ~8.7
+                if (vol <= 25.1) return 8.7; // equivalence point (salt of WA+SB is basic)
                 return 14 + Math.log10(Math.max((molesBase - molesAcid)/totalVol, 1e-14));
             }
             if (type === 'SA-WB') {
-                if (vol < 24.9) { return -Math.log10(Math.max((molesAcid - molesBase)/totalVol, 1e-14)); }
-                if (vol <= 25.1) return 7 - 0.5*(14+Math.log10(Kb) - (-Math.log10(ca/2))); // ~5.3
+                // Strong acid + Weak base: stays low, sharp jump to ~5.3, then levels off ~8-9
+                if (vol < 24.9) { 
+                    return -Math.log10(Math.max((molesAcid - molesBase)/totalVol, 1e-14)); 
+                }
+                if (vol <= 25.1) return 5.3; // equivalence point (salt of SA+WB is acidic)
+                // After equivalence: weak base buffer region - levels off around 8-9
                 const excessBase = molesBase - molesAcid;
                 const concBase = excessBase / totalVol;
-                const OH = Math.sqrt(Kb * concBase);
-                return 14 + Math.log10(Math.max(OH, 1e-14));
+                // Buffer of NH3/NH4+ limits pH rise
+                const ratio = concBase / (molesAcid / totalVol); // excess base / conjugate acid
+                const pH = 14 - pKb + Math.log10(Math.max(ratio, 0.01));
+                return Math.min(pH, 9.2); // cap at ~9.2 as shown in diagram
             }
-            // WA-WB
-            if (vol < 0.1) return 0.5*(-Math.log10(Ka) - Math.log10(ca));
-            if (vol < 24.9) {
-                const remain = molesAcid - molesBase;
-                if (remain <= 0) return 7;
-                return -Math.log10(Ka) + Math.log10(molesBase / remain);
+            // WA-WB: Gradual S-curve, no sharp jump
+            // Starts ~3, rises smoothly through equivalence (~7), levels off ~9
+            if (vol < 0.1) return 3.0; // initial weak acid pH
+            if (vol <= 50) {
+                // Smooth S-curve using logistic-like function to match the diagram
+                const midpoint = 25.0;
+                const steepness = 0.15;
+                const minPH = 3.0;
+                const maxPH = 9.0;
+                const t = (vol - midpoint) * steepness;
+                return minPH + (maxPH - minPH) / (1 + Math.exp(-t));
             }
-            if (vol <= 25.1) return 7.0;
-            const excessBase = molesBase - molesAcid;
-            const concBase = excessBase / totalVol;
-            const OH = Math.sqrt(Kb * concBase);
-            return 14 + Math.log10(Math.max(OH, 1e-14));
+            return 9.0;
         }
 
         const titrationInfo = {
